@@ -1,0 +1,69 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "top",
+  "groupings": [
+    {
+      "title": "Core",
+      "description": "Built-in components, hooks, and the render/lifecycle API.",
+      "skills": [
+        "ink-accessibility",
+        "ink-animation-and-performance",
+        "ink-borders-and-backgrounds",
+        "ink-focus-management",
+        "ink-getting-started",
+        "ink-input-handling",
+        "ink-layout",
+        "ink-rendering-and-lifecycle",
+        "ink-static-output",
+        "ink-terminal-io",
+        "ink-text-styling"
+      ]
+    },
+    {
+      "title": "Patterns",
+      "description": "Recipes for structuring a real Ink app: architecture, layouts, async, tests.",
+      "skills": [
+        "ink-app-architecture",
+        "ink-async-and-suspense",
+        "ink-fullscreen-layouts",
+        "ink-testing"
+      ]
+    },
+    {
+      "title": "Ecosystem",
+      "description": "The @inkjs/ui component library and the wider community package ecosystem.",
+      "skills": [
+        "ink-ecosystem-overview"
+      ]
+    },
+    {
+      "title": "Ink UI (@inkjs/ui)",
+      "description": "Anthropic-maintained component library: inputs, feedback, lists, theming.",
+      "skills": [
+        "inkjs-ui-feedback",
+        "inkjs-ui-inputs",
+        "inkjs-ui-lists",
+        "inkjs-ui-theming"
+      ]
+    },
+    {
+      "title": "Data display",
+      "description": "Tables, charts, markdown/syntax highlighting, and decorative text.",
+      "skills": [
+        "ink-charts",
+        "ink-decoration",
+        "ink-markdown-and-code",
+        "ink-tables"
+      ]
+    },
+    {
+      "title": "Interaction",
+      "description": "Forms, tab/scroll navigation, and task-runner components.",
+      "skills": [
+        "ink-forms",
+        "ink-navigation",
+        "ink-task-runners"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Validate, typecheck, and verify generated files (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Validate skill structure
+        run: npm run validate
+
+      - name: Typecheck every code sample
+        run: npm run typecheck
+
+      - name: Verify generated files are up to date
+        run: |
+          npm run index
+          if ! git diff --exit-code -- skills.sh.json .claude-plugin README.md; then
+            echo "::error::Generated files are stale. Run 'npm run index' and commit the result."
+            exit 1
+          fi
+
+      - name: Discovery smoke test (mirrors how the skills CLI would see this repo)
+        env:
+          DISABLE_TELEMETRY: '1'
+        run: |
+          npx skills add ./ --list
+
+      - name: Verify npm package contents
+        run: npm pack --dry-run

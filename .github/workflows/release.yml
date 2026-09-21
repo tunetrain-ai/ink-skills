@@ -1,0 +1,111 @@
+name: Release
+
+# Fires on a version tag (`v0.1.0`, ...) pushed by a maintainer, or manually
+# via workflow_dispatch with dry_run defaulted to true so a run started by
+# mistake can't publish. See CONTRIBUTING.md for the release checklist and
+# the one-time npm trusted-publisher setup this depends on.
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run every check but skip the actual npm publish / GitHub release'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish-npm:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for npm trusted publishing (OIDC) — no NPM_TOKEN secret needed
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      dry_run: ${{ steps.dry-run.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+          cache: npm
+
+      # Trusted publishing (OIDC) requires a modern npm CLI.
+      - name: Ensure npm supports OIDC trusted publishing
+        run: npm install -g npm@latest && npm --version
+
+      - run: npm ci
+
+      - name: Read package version
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Verify tag matches package.json version
+        if: github.event_name == 'push'
+        run: |
+          tag="${GITHUB_REF#refs/tags/v}"
+          pkg="${{ steps.version.outputs.version }}"
+          if [ "$tag" != "$pkg" ]; then
+            echo "::error::Tag v$tag does not match package.json version $pkg"
+            exit 1
+          fi
+
+      - name: Determine dry-run mode
+        id: dry-run
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "value=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Never release content that hasn't passed the same gate as every PR.
+      - name: Validate and typecheck
+        run: npm run check
+
+      - name: Verify generated files are up to date
+        run: |
+          npm run index
+          git diff --exit-code -- skills.sh.json .claude-plugin README.md
+
+      - name: Publish (dry run)
+        if: steps.dry-run.outputs.value == 'true'
+        run: npm publish --provenance --access public --dry-run
+
+      - name: Publish
+        if: steps.dry-run.outputs.value == 'false'
+        run: npm publish --provenance --access public
+
+  github-release:
+    name: Create GitHub release
+    needs: publish-npm
+    if: needs.publish-npm.outputs.dry_run == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build tarball for the release asset
+        run: npm pack
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.publish-npm.outputs.version }}
+          generate_release_notes: true
+          files: tunetrain-ai-ink-skills-*.tgz

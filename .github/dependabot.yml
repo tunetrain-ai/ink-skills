@@ -1,0 +1,33 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+    groups:
+      # ink/@inkjs/ui bumps change what the typecheck actually verifies
+      # against — keep them isolated from routine tooling bumps so a CI
+      # failure clearly points at the right cause.
+      ink-runtime:
+        patterns:
+          - 'ink'
+          - '@inkjs/ui'
+          - 'ink-testing-library'
+          - 'react'
+          - '@types/react'
+      tooling:
+        patterns:
+          - 'typescript'
+          - 'prettier'
+          - '@types/node'
+          - 'yaml'
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
