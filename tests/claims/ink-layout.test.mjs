@@ -1,7 +1,8 @@
 // Claims for skills/core/ink-layout (SKILL.md, references/box-props.md, references/scrollable-view.md).
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { skill, tsx, ink, h, React, mount, stripAnsi, pkg, ROOT, loadEcosystem } from '../lib/index.mjs';
+import { skill, tsx, ink, h, React, mount, stripAnsi, pkg, readPackageFile, ROOT, loadEcosystem } from '../lib/index.mjs';
+import { pick, resolvePath, propAndValue, propAndExpression, scrollView, press } from './ink-layout.helpers.mjs';
 
 const { Box, Text, Spacer, renderToString, measureElement, useBoxMetrics } = ink;
 const s = skill('ink-layout');
@@ -12,6 +13,7 @@ const render = (element, columns = 80) => renderToString(element, { columns });
 const labels = (...names) => names.map((name, i) => h(Text, { key: i }, name));
 const boxed = (props, ...names) => render(h(Box, props, ...labels(...names)));
 const lines = (out) => out.split('\n');
+const rows = (from, to) => Array.from({ length: to - from + 1 }, (_, i) => `Row ${from + i}`);
 /** Width in cells of the widest line (ANSI stripped). */
 const widest = (out) => Math.max(...lines(stripAnsi(out)).map((l) => l.length));
 /** A bordered box of the given props, so its extent is visible as characters. */
@@ -58,11 +60,15 @@ export const onText = <Text width={5}>x</Text>; //! TS2322
 `);
 
 s.fact(F, ['Every `<Box>` is a Yoga flexbox container — think `<div style="display: flex">`'], { kind: 'D' }, async (t, q) => {
-  const component = ink[q.tok('<Box>').slice(1, -1)];
+  const component = q.el(ink, '<Box>');
   const [prop, value] = q.tok('<div style="display: flex">').match(/style="([^"]+)"/)[1].split(': ');
   const sibling = (props) => render(h(component, props, ...labels('a', 'b')));
+  // what `display` does to a Box: flex lays the children out, none removes the box
+  const displayed = { flex: 'ab', none: '' };
+  t.equal(sibling({ [prop]: value }), pick(displayed, value), 'display: flex lays the children out');
   t.equal(sibling({}), sibling({ [prop]: value }), 'a Box with no display behaves exactly like display: flex');
   t.equal(sibling({}), 'ab', 'children sit side by side, as in a flex row');
+  t.equal(sibling({ [prop]: 'none' }), displayed.none, 'and `display` is the prop that switches the box off');
   t.ok(pkg('ink').dependencies['yoga-layout'], 'the layout engine is Yoga');
 });
 
@@ -104,15 +110,21 @@ s.guidance(F, ['This file covers the mental model and the handful of things that
 // ----------------------------------------------------------- default direction
 
 s.fact(F, ['The flex default is `row`, not `column`', "Unlike a browser `<div>`, `<Box>`'s default `flexDirection` is `row` — children lay out left-to-right unless you set `flexDirection=\"column\"`."], { kind: 'D', ctx: ['<div>'] }, async (t, q) => {
+  const Component = q.el(ink, '<Box>');
   const prop = q.tok('flexDirection');
   const row = q.tok('row');
   const column = q.tok('column');
-  const direction = (value) => boxed(value === undefined ? {} : { [prop]: value }, 'one', 'two');
-  t.equal(direction(undefined), direction(row), 'no flexDirection means row');
-  t.equal(direction(row), 'onetwo', 'row lays children left to right');
-  t.equal(direction(column), 'one\ntwo', 'column stacks them');
-  t.equal(boxed({ flexDirection: 'column' }, 'one', 'two'), direction(q.tok('flexDirection="column"').split('=')[1].replace(/"/g, '')));
-  q.tok('<Box>');
+  const [quotedProp, quotedValue] = propAndValue(q.tok('flexDirection="column"'));
+  const stack = (props) => render(h(Component, props, ...labels('one', 'two')));
+  // an unknown flexDirection is ignored (and Yoga's own default is column), so each value is checked against what it must draw
+  const drawn = { row: 'onetwo', column: 'one\ntwo' };
+  t.equal(stack({}), pick(drawn, row), 'no flexDirection means row');
+  t.equal(stack({ [prop]: row }), pick(drawn, row), 'row lays children left to right');
+  t.equal(stack({ [prop]: column }), pick(drawn, column), 'column stacks them');
+  t.notEqual(stack({ [prop]: column }), stack({}), 'so the default is not column');
+  t.equal(stack({ [quotedProp]: quotedValue }), pick(drawn, quotedValue), 'flexDirection="column" is the way to ask for a column');
+  t.equal(quotedProp, prop);
+  t.equal(quotedValue, column);
 });
 
 s.fence(F, 1);
@@ -224,18 +236,23 @@ s.fact(F, ['Fill remaining space with flexGrow instead of a fixed width'], { kin
 
 // -------------------------------------------------------- measuring at runtime
 
-/** Mount a probe that records measureElement and useBoxMetrics for one bordered, padded box. */
-async function measured(extraBoxProps = {}, wrapperProps = {}) {
+/**
+ * Mount a probe that records measureElement and useBoxMetrics for one bordered, padded box.
+ * `apis` swaps in the functions a claim looked up from its quote (measureElement, useBoxMetrics,
+ * useEffect, useLayoutEffect), so a changed name in the text changes what the probe calls.
+ */
+async function measured(extraBoxProps = {}, wrapperProps = {}, apis = {}) {
+  const { measureElement: measure = measureElement, useBoxMetrics: useMetrics = useBoxMetrics, useEffect = React.useEffect, useLayoutEffect = React.useLayoutEffect } = apis;
   const seen = { renders: [], effect: null, layoutEffect: null, handler: null };
   const Probe = () => {
     const ref = React.useRef(null);
-    const metrics = useBoxMetrics(ref);
-    React.useLayoutEffect(() => {
-      seen.layoutEffect = measureElement(ref.current);
+    const metrics = useMetrics(ref);
+    useLayoutEffect(() => {
+      seen.layoutEffect = measure(ref.current);
     });
-    React.useEffect(() => {
-      seen.effect = measureElement(ref.current);
-      seen.handler = () => measureElement(ref.current);
+    useEffect(() => {
+      seen.effect = measure(ref.current);
+      seen.handler = () => measure(ref.current);
     });
     seen.renders.push(metrics);
     return h(Box, { width: 20, ...wrapperProps }, h(Box, { ref, borderStyle: 'single', padding: 1, flexGrow: 1, ...extraBoxProps }, h(Text, null, 'hi')));
@@ -246,9 +263,9 @@ async function measured(extraBoxProps = {}, wrapperProps = {}) {
 }
 
 s.fact(F, ["`measureElement(ref.current)` and the `useBoxMetrics(ref)` hook both return a box's resolved layout:"], { kind: 'R' }, async (t, q) => {
-  q.tok('measureElement(ref.current)');
-  q.tok('useBoxMetrics(ref)');
-  const { seen } = await measured();
+  const measure = q.api(ink, 'measureElement(ref.current)');
+  const useMetrics = q.api(ink, 'useBoxMetrics(ref)');
+  const { seen } = await measured({}, {}, { measureElement: measure, useBoxMetrics: useMetrics });
   const last = seen.renders.at(-1);
   t.equal(seen.effect.width, 20);
   t.equal(seen.effect.height, 5);
@@ -257,29 +274,31 @@ s.fact(F, ["`measureElement(ref.current)` and the `useBoxMetrics(ref)` hook both
 });
 
 s.fact(F, ['`measureElement` → `{x, y, width, height, clientWidth, clientHeight}`'], { kind: 'R' }, async (t, q) => {
-  q.tok('measureElement');
+  const measure = q.api(ink, 'measureElement');
   const keys = q.tok('{x, y, width, height, clientWidth, clientHeight}').slice(1, -1).split(', ');
-  const { seen } = await measured();
+  const { seen } = await measured({}, {}, { measureElement: measure });
   t.deepEqual(Object.keys(seen.effect).sort(), [...keys].sort());
 });
 
 s.fact(F, ['`useBoxMetrics` → `{width, height, left, top, clientWidth, clientHeight, hasMeasured}`'], { kind: 'R' }, async (t, q) => {
-  q.tok('useBoxMetrics');
+  const useMetrics = q.api(ink, 'useBoxMetrics');
   const keys = q.tok('{width, height, left, top, clientWidth, clientHeight, hasMeasured}').slice(1, -1).split(', ');
-  const { seen } = await measured();
+  const { seen } = await measured({}, {}, { useBoxMetrics: useMetrics });
   t.deepEqual(Object.keys(seen.renders.at(-1)).sort(), [...keys].sort());
 });
 
 s.guidance(F, ['Two differences:'], 'lead-in to the two bullets that follow, each proven separately');
 
 s.fact(F, ['`useBoxMetrics` is a hook that **re-renders your component** when layout changes (resize, content changes); on the first render, before the first layout pass, it returns zeros with `hasMeasured` set to `false`. `measureElement` is an **imperative, point-in-time read** of the layout as it is now — call it from `useEffect`/`useLayoutEffect`, an input handler, or a timer, once the element has mounted.'], { kind: 'R', ctx: ['re-renders your component', 'imperative, point-in-time read'] }, async (t, q) => {
-  q.tok('useBoxMetrics');
-  q.tok('measureElement');
-  q.tok('useEffect');
-  q.tok('useLayoutEffect');
+  const apis = {
+    useBoxMetrics: q.api(ink, 'useBoxMetrics'),
+    measureElement: q.api(ink, 'measureElement'),
+    useEffect: q.api(React, 'useEffect'),
+    useLayoutEffect: q.api(React, 'useLayoutEffect'),
+  };
   const measuredKey = q.tok('hasMeasured');
   const falseValue = q.tok('false');
-  const { seen, app } = await measured({}, { width: '50%' });
+  const { seen, app } = await measured({}, { width: '50%' }, apis);
   t.deepEqual(
     { ...seen.renders[0], [measuredKey]: String(seen.renders[0][measuredKey]) },
     { width: 0, height: 0, left: 0, top: 0, clientWidth: 0, clientHeight: 0, [measuredKey]: falseValue },
@@ -310,20 +329,24 @@ export const nothing = (node: null) => measureElement(node); //! TS2345
 `);
 
 s.fact(F, ['`measureElement` takes a non-null `DOMElement`, so guard `ref.current` before calling it (a ref is `null` until the element mounts).'], { kind: 'R' }, async (t, q) => {
-  q.tok('measureElement');
-  q.tok('DOMElement');
-  q.tok('ref.current');
-  q.tok('null');
-  t.throws(() => measureElement(null), TypeError, 'calling it with the null a ref holds before mount throws');
-  let during = 'unset';
+  const measure = q.api(ink, 'measureElement');
+  const typeName = q.tok('DOMElement');
+  const [refProp, currentKey] = q.tok('ref.current').split('.');
+  const nothing = JSON.parse(q.tok('null'));
+  t.match(readPackageFile('ink', 'build/index.d.ts'), new RegExp(`export type \\{ ${typeName} \\} from`), 'DOMElement is the type Ink exports for the element a ref to a <Box> holds');
+  t.throws(() => measure(nothing), TypeError, 'calling it with the null a ref holds before mount throws');
+  let first = 'unset';
+  let holder;
   const Probe = () => {
-    const ref = React.useRef(null);
-    during = ref.current;
-    return h(Box, { ref });
+    const ref = React.useRef(nothing);
+    holder = ref;
+    if (first === 'unset') first = ref[currentKey];
+    return h(Box, { [refProp]: ref, width: 7 });
   };
   const app = mount(h(Probe));
   await app.flush();
-  t.equal(during, null, 'during the first render the ref is still null');
+  t.equal(first, nothing, 'during the first render the ref is still null');
+  t.equal(measure(holder[currentKey]).width, 7, 'once the element has mounted the ref holds it, and measuring it works');
 });
 
 s.fact(F, ['`clientWidth`/`clientHeight` are the size excluding borders but **not** padding.'], { kind: 'R', ctx: ['not'] }, async (t, q) => {
@@ -338,24 +361,33 @@ s.fact(F, ['`clientWidth`/`clientHeight` are the size excluding borders but **no
 s.fact(F, ["`left`/`top` are relative to the parent and `x`/`y` accumulate up the layout tree; neither includes an ancestor's `contentOffsetX`/`contentOffsetY`, so subtract the offset when hit-testing inside a scrolled box."], { kind: 'R' }, async (t, q) => {
   const [left, top, x, y] = [q.tok('left'), q.tok('top'), q.tok('x'), q.tok('y')];
   const [offX, offY] = [q.tok('contentOffsetX'), q.tok('contentOffsetY')];
-  const seen = {};
-  const Probe = () => {
-    const ref = React.useRef(null);
-    const metrics = useBoxMetrics(ref);
-    React.useEffect(() => {
-      seen.measure = measureElement(ref.current);
-    });
-    seen.hook = metrics;
-    return h(Box, { width: 30, height: 10, paddingLeft: 3, paddingTop: 2 },
-      h(Box, { width: 20, height: 6, overflow: 'hidden', [offX]: 2, [offY]: 1 },
-        h(Box, { ref, marginLeft: 4, marginTop: 5, width: 4, height: 2 }, h(Text, null, 'zz'))));
+  const scene = async (offsets) => {
+    const seen = {};
+    const Probe = () => {
+      const ref = React.useRef(null);
+      const metrics = useBoxMetrics(ref);
+      React.useEffect(() => {
+        seen.measure = measureElement(ref.current);
+      });
+      seen.hook = metrics;
+      return h(Box, { width: 30, height: 10, paddingLeft: 3, paddingTop: 2 },
+        h(Box, { width: 20, height: 6, overflow: 'hidden', ...offsets },
+          h(Box, { ref, marginLeft: 4, marginTop: 5, width: 4, height: 2 }, h(Text, null, 'zz'))));
+    };
+    const app = mount(h(Probe), { columns: 60 });
+    await app.flush();
+    return { ...seen, screen: app.screen() };
   };
-  const app = mount(h(Probe), { columns: 60 });
-  await app.flush();
-  t.equal(seen.hook[left], 4, 'left is relative to the parent (its margin), ignoring the ancestor offset');
-  t.equal(seen.hook[top], 5, 'top is relative to the parent (its margin), ignoring the ancestor offset');
-  t.equal(seen.measure[x], 3 + 4, 'x accumulates the ancestors (padding 3 + margin 4) without subtracting contentOffsetX');
-  t.equal(seen.measure[y], 2 + 5, 'y accumulates the ancestors (padding 2 + margin 5) without subtracting contentOffsetY');
+  const still = await scene({});
+  t.deepEqual([still.hook[left], still.hook[top], still.measure[x], still.measure[y]], [4, 5, 3 + 4, 2 + 5], 'without an offset: left/top are the margins, x/y add the ancestors (padding 3 + margin 4, padding 2 + margin 5)');
+  for (const [axis, offset] of [[offX, 2], [offY, 1]]) {
+    const scrolled = await scene({ [axis]: offset });
+    t.notEqual(scrolled.screen, still.screen, `${axis} is real: the scrolled box draws its content elsewhere`);
+    t.equal(scrolled.hook[left], still.hook[left], `left ignores ${axis}`);
+    t.equal(scrolled.hook[top], still.hook[top], `top ignores ${axis}`);
+    t.equal(scrolled.measure[x], still.measure[x], `x ignores ${axis}`);
+    t.equal(scrolled.measure[y], still.measure[y], `y ignores ${axis}`);
+  }
 });
 
 s.fence(F, 5);
@@ -384,34 +416,41 @@ s.fact(F, ['only reliable here — post-render'], { kind: 'R' }, async (t) => {
 s.fact(F, ['`<Box>` has `contentOffsetX`/`contentOffsetY` (cells, default `0`) that shift its children left/up.'], { kind: 'R' }, async (t, q) => {
   const [offX, offY] = [q.tok('contentOffsetX'), q.tok('contentOffsetY')];
   const zero = Number(q.tok('0'));
-  q.tok('<Box>');
-  const view = (props) => render(h(Box, { width: 4, height: 2, overflow: 'hidden', ...props }, h(Box, { flexDirection: 'column', flexShrink: 0, width: 8 }, h(Text, null, 'abcdefgh'), h(Text, null, 'ijklmnop'))));
+  const BoxEl = q.el(ink, '<Box>');
+  const view = (props) => render(h(BoxEl, { width: 4, height: 2, overflow: 'hidden', ...props }, h(Box, { flexDirection: 'column', flexShrink: 0, width: 8 }, h(Text, null, 'abcdefgh'), h(Text, null, 'ijklmnop'))));
   t.equal(view({}), view({ [offX]: zero, [offY]: zero }), 'the default is 0');
   t.equal(view({ [offX]: 2 }), 'cdef\nklmn', 'contentOffsetX shifts the children left');
   t.equal(view({ [offY]: 1 }).trimEnd(), 'ijkl', 'contentOffsetY shifts the children up (the second row is now past the end)');
 });
 
 s.fact(F, ['Put the content in a fixed-size `overflow="hidden"` viewport with `flexDirection="column"` and set `contentOffsetY={scrollTop}`; clamp `scrollTop` to `content.height - viewport.clientHeight`, both measured with `useBoxMetrics`.'], { kind: 'R' }, async (t, q) => {
-  q.tok('overflow="hidden"');
-  q.tok('contentOffsetY={scrollTop}');
-  const direction = q.tok('flexDirection="column"').split('=')[1].replace(/"/g, '');
-  q.tok('scrollTop');
-  q.tok('useBoxMetrics');
+  const [overflowProp, hidden] = propAndValue(q.tok('overflow="hidden"'));
+  const [directionProp, column] = propAndValue(q.tok('flexDirection="column"'));
+  const [offsetProp, offsetExpression] = propAndExpression(q.tok('contentOffsetY={scrollTop}'));
+  const scrollTop = q.tok('scrollTop');
   const formula = q.tok('content.height - viewport.clientHeight');
-  const { scrollView, press } = await import('./ink-layout.helpers.mjs');
-  const view = await scrollView({ rows: 20, height: 5 });
-  t.equal(view.visible(), ['Row 1', 'Row 2', 'Row 3', 'Row 4', 'Row 5'].join('\n'));
+  const useMetrics = q.api(ink, 'useBoxMetrics');
+  t.equal(offsetExpression, scrollTop, 'the offset prop is set from scrollTop');
+  // the pattern built from the quote's own props; a footer below it shows whether the viewport clips
+  const make = (direction) => scrollView({ rows: 20, height: 5, offsetProp, useBoxMetrics: useMetrics, footer: 'END', viewport: { [overflowProp]: hidden, [directionProp]: direction } });
+  const view = await make(column);
+  t.equal(view.visible(), [...rows(1, 5), 'END'].join('\n'), 'the viewport shows 5 rows and clips the other 15 (the footer below it is untouched)');
   await press(view, 'down', 40);
-  const max = view.contentHeight() - view.viewportClientHeight(); // = the formula in the quote
-  t.equal(formula, 'content.height - viewport.clientHeight');
+  const [minuend, subtrahend] = formula.split(' - ');
+  const scope = { content: view.seen.content, viewport: view.seen.viewport };
+  const max = resolvePath(scope, minuend) - resolvePath(scope, subtrahend);
   t.equal(max, 15, '20 rows in a 5-row viewport: the largest useful offset is 15');
-  t.equal(view.visible(), ['Row 16', 'Row 17', 'Row 18', 'Row 19', 'Row 20'].join('\n'), 'clamped at that offset the last rows are showing');
+  t.equal(view.seen[scrollTop], max, 'scrollTop stops at the formula however often the key is pressed');
+  t.equal(view.visible(), [...rows(16, 20), 'END'].join('\n'), 'clamped at that offset the last rows are showing');
   // the viewport must be a column: in a row, the content wrapper is stretched to the viewport's
   // height (cross-axis stretch), so its measured height is the viewport's and nothing can scroll
-  const wrongWay = await scrollView({ rows: 20, height: 5, viewportProps: { flexDirection: 'row' } });
-  t.equal(wrongWay.contentHeight(), 5, 'in a row viewport the wrapper is squeezed to the viewport height');
-  const rightWay = await scrollView({ rows: 20, height: 5, viewportProps: { flexDirection: direction } });
-  t.equal(rightWay.contentHeight(), 20, 'in a column viewport the wrapper keeps its full height');
+  const heights = { row: 5, column: 20 };
+  const wrongWay = await make('row');
+  t.equal(wrongWay.contentHeight(), pick(heights, 'row'), 'in a row viewport the wrapper is squeezed to the viewport height');
+  const rightWay = await make(column);
+  t.equal(rightWay.contentHeight(), pick(heights, column), 'in a column viewport the wrapper keeps its full height');
+  const reference = s.fenceOf('references/scrollable-view.md', 0).code;
+  t.ok(reference.includes(`${offsetProp}={${scrollTop}}`), 'which is how the reference component sets it');
 });
 
 s.fact(F, ['See `references/scrollable-view.md` for a full component.'], { kind: 'D' }, async (t, q) => {
@@ -419,18 +458,19 @@ s.fact(F, ['See `references/scrollable-view.md` for a full component.'], { kind:
 });
 
 s.fact(F, ['Everything inside a `contentOffset` viewport is still laid out'], { kind: 'R' }, async (t, q) => {
-  q.tok('contentOffset');
+  const offsetProp = `${q.tok('contentOffset')}Y`;
   const seen = {};
   const Probe = () => {
     const ref = React.useRef(null);
     seen.metrics = useBoxMetrics(ref);
-    return h(Box, { width: 10, height: 2, flexDirection: 'column', overflow: 'hidden', contentOffsetY: 8 },
+    return h(Box, { width: 10, height: 2, flexDirection: 'column', overflow: 'hidden', [offsetProp]: 8 },
       h(Box, { flexDirection: 'column', flexShrink: 0 },
         ...labels(...Array.from({ length: 12 }, (_, i) => `r${i}`)).slice(0, 11),
         h(Box, { ref, key: 'tail' }, h(Text, null, 'tail'))));
   };
   const app = mount(h(Probe), { columns: 20 });
   await app.flush();
+  t.equal(app.screen(), 'r8\nr9', 'the viewport is scrolled: the rows above it are clipped away');
   t.equal(seen.metrics.hasMeasured, true, 'a row entirely above the visible area was laid out and measured');
   t.equal(seen.metrics.top, 11, 'at its natural position, 11 rows down');
 });

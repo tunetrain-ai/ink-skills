@@ -1,50 +1,125 @@
 // A port of the ScrollView component shown in references/scrollable-view.md, instrumented so
 // the claims can read the measured numbers. (Claims files are not .tsx, so the JSX is written
-// with h(); the structure, props and clamping are identical to the fence.)
+// with h(); the structure, props and clamping are identical to the fence, which the
+// scrollable-view claims run side by side with this port.)
+//
+// Every name the skill text uses (a prop, a hook, a state variable) is handed in by the claim from
+// the quote it proves, so that changing a name in the text changes what is rendered or looked up.
 import { h, React, ink, mount, keys } from '../lib/index.mjs';
 
-const { Box, Text, useInput, useBoxMetrics } = ink;
+const { Box, Text, useInput } = ink;
 
 /**
- * @param {{rows?: number, height?: number, shrink0?: boolean, viewportProps?: object, contentProps?: object, columns?: number}} [opts]
+ * The value a table or a quote names, looked up in a table of expected outcomes. A value that is not
+ * in the table (a token whose text changed, an unknown member of a union) throws, so the claim
+ * fails instead of passing on whatever the unknown value happens to render.
  */
-export async function scrollView({ rows = 20, height = 5, shrink0 = true, viewportProps = {}, contentProps = {}, columns = 40 } = {}) {
-  const seen = { content: null, viewport: null, scrollTop: 0 };
+export function pick(table, value) {
+  if (!Object.hasOwn(table, value)) throw new Error(`"${value}" is not one of ${Object.keys(table).map((k) => `"${k}"`).join(', ')}`);
+  return table[value];
+}
+
+/** `scope.a.b` for the path "a.b"; a missing step throws. */
+export function resolvePath(scope, path) {
+  return path.split('.').reduce((node, key) => {
+    if (node === null || typeof node !== 'object' || !(key in node)) throw new Error(`"${path}": no "${key}" to read`);
+    return node[key];
+  }, scope);
+}
+
+/** `name="value"` → ['name', 'value']; anything else throws. */
+export function propAndValue(token) {
+  const m = token.match(/^(\w+)="([^"]*)"$/);
+  if (!m) throw new Error(`not a name="value" prop: ${token}`);
+  return [m[1], m[2]];
+}
+
+/** `name={expression}` → ['name', 'expression']; anything else throws. */
+export function propAndExpression(token) {
+  const m = token.match(/^(\w+)=\{([^{}]*)\}$/);
+  if (!m) throw new Error(`not a name={expression} prop: ${token}`);
+  return [m[1], m[2]];
+}
+
+/** `flexShrink={0}` → {flexShrink: 0}: the prop with its literal value. */
+export function numericProp(token) {
+  const [name, expression] = propAndExpression(token);
+  const value = Number(expression);
+  if (!Number.isFinite(value)) throw new Error(`not a numeric literal: ${token}`);
+  return { [name]: value };
+}
+
+const DEFAULT_VIEWPORT = { overflow: 'hidden', flexDirection: 'column' };
+const DEFAULT_CONTENT = { flexDirection: 'column', flexShrink: 0 };
+
+/**
+ * @param {{rows?: number, height?: number, columns?: number, step?: number, shrink0?: boolean,
+ *   viewport?: object, content?: object, viewportProps?: object, contentProps?: object,
+ *   offsetProp?: string, useBoxMetrics?: Function, footer?: string}} [opts]
+ *   viewport / content: replace the pattern's own props (overflow + column for the viewport, column +
+ *   flexShrink 0 for the content wrapper); viewportProps / contentProps: added on top.
+ *   offsetProp: the viewport prop that carries scrollTop. useBoxMetrics: the hook that measures both.
+ *   footer: a line of text rendered below the viewport, so that content leaking out of it is visible.
+ */
+export async function scrollView({
+  rows = 20,
+  height = 5,
+  columns = 40,
+  step = 1,
+  shrink0 = true,
+  viewport = DEFAULT_VIEWPORT,
+  content = DEFAULT_CONTENT,
+  viewportProps = {},
+  contentProps = {},
+  offsetProp = 'contentOffsetY',
+  useBoxMetrics = ink.useBoxMetrics,
+  footer,
+} = {}) {
+  // `renders` keeps what each render computed, in order; `scrollTop`, `maxScrollTop`, `content`
+  // and `viewport` mirror the latest one under the names the component uses for them
+  const seen = { content: null, viewport: null, scrollTop: 0, maxScrollTop: 0, renders: [] };
+  const contentStyle = shrink0 ? content : Object.fromEntries(Object.entries(content).filter(([name]) => name !== 'flexShrink'));
 
   const ScrollView = ({ children }) => {
     const viewportRef = React.useRef(null);
     const contentRef = React.useRef(null);
-    const viewport = useBoxMetrics(viewportRef);
-    const content = useBoxMetrics(contentRef);
+    const viewportMetrics = useBoxMetrics(viewportRef);
+    const contentMetrics = useBoxMetrics(contentRef);
     const [requested, setRequested] = React.useState(0);
-    const maxScrollTop = Math.max(0, content.height - viewport.clientHeight);
+    const maxScrollTop = Math.max(0, contentMetrics.height - viewportMetrics.clientHeight);
     // clamp every render — the maximum shrinks as the content or viewport change
     const scrollTop = Math.min(requested, maxScrollTop);
-    seen.content = content;
-    seen.viewport = viewport;
+    seen.content = contentMetrics;
+    seen.viewport = viewportMetrics;
     seen.scrollTop = scrollTop;
+    seen.maxScrollTop = maxScrollTop;
+    seen.renders.push({ content: contentMetrics, viewport: viewportMetrics, scrollTop, maxScrollTop });
 
     useInput((_input, key) => {
-      if (key.upArrow) setRequested(Math.max(0, scrollTop - 1));
-      if (key.downArrow) setRequested(Math.min(maxScrollTop, scrollTop + 1));
+      if (key.upArrow) setRequested(Math.max(0, scrollTop - step));
+      if (key.downArrow) setRequested(Math.min(maxScrollTop, scrollTop + step));
     });
 
     return h(
       Box,
-      { ref: viewportRef, height, flexDirection: 'column', overflow: 'hidden', contentOffsetY: scrollTop, ...viewportProps },
-      h(Box, { ref: contentRef, flexDirection: 'column', ...(shrink0 ? { flexShrink: 0 } : {}), ...contentProps }, children),
+      { ref: viewportRef, height, ...viewport, [offsetProp]: scrollTop, ...viewportProps },
+      h(Box, { ref: contentRef, ...contentStyle, ...contentProps }, children),
     );
   };
 
   const makeRows = (count, render = (i) => `Row ${i + 1}`) => Array.from({ length: count }, (_, i) => h(Text, { key: i }, render(i)));
-  const app = mount(h(ScrollView, null, makeRows(rows)), { columns });
+  const tree = (count, render) => {
+    const view = h(ScrollView, null, makeRows(count, render));
+    return footer === undefined ? view : h(Box, { flexDirection: 'column' }, view, h(Text, null, footer));
+  };
+  const app = mount(tree(rows), { columns });
   await app.flush();
   return {
     app,
     seen,
     /** Re-render the same ScrollView with a different number of rows (state is kept). */
     async setRows(count, render) {
-      await app.rerender(h(ScrollView, null, makeRows(count, render)));
+      await app.rerender(tree(count, render));
     },
     visible: () => app.screen(),
     contentHeight: () => seen.content.height,

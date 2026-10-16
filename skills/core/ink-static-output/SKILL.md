@@ -10,9 +10,9 @@ metadata:
 
 `<Static>` renders its output **once**, permanently, above everything else —
 for activity that doesn't change after it's shown: completed tasks, log
-lines, anything you can't know the final count of ahead of time. It's the
-mechanism behind tools like Tap's completed-test list and Gatsby's
-generated-page log running alongside a live progress bar.
+lines, anything you can't know the final count of ahead of time. Ink's own
+documentation for it names Tap's completed-test list and Gatsby's
+generated-page log, running alongside a live progress bar, as examples.
 
 ```tsx
 import React, {useState, useEffect} from 'react';
@@ -64,16 +64,20 @@ render(<Example />);
 | Prop | Type | Notes |
 | --- | --- | --- |
 | `items` | `Array` | Items of any type to render. |
-| `style` | `object` | Applied to the container of rendered children — accepts the same properties as `<Box>` (see `ink-layout`). |
+| `style` | `object` | Applied to the container of rendered children — accepts every `<Box>` style property (see `ink-layout`). |
 | `children(item, index)` | `Function` | Called once per item in `items`. **Must assign a `key` to the root element it returns.** |
 
 ## The one rule that matters
 
-`<Static>` **only renders items newly added to `items` since the last
-render** — it does not diff or re-render items it already rendered. If you
-mutate an object already present in a previous `items` array, that mutation
-is invisible; only append new items. This is what makes it safe to use with
-an unbounded, ever-growing list without accumulating render cost.
+`<Static>` renders **only the items past the previous `items.length`** — it
+counts items, it does not diff them, so it never re-renders or erases an item it
+already rendered. If you mutate an object already present in a previous `items`
+array, replace an earlier item, or shrink the array, nothing on screen changes;
+only append new items. After a shrink, appended items are counted from the
+new, shorter length. Each item's render function runs once, however many times
+the list grows, and the elements it returns are removed from the tree as soon as
+they have been written: a component inside an item is unmounted right away, so
+keep items free of state, effects and timers.
 
 ## When not to use it
 

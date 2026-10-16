@@ -26,7 +26,7 @@ const Example = () => (
 );
 ```
 
-Or supply a custom glyph set for every edge/corner:
+Or supply a custom glyph set for every edge/corner (all eight glyphs are required):
 
 ```tsx
 import React from 'react';
@@ -101,8 +101,9 @@ const Example = () => (
 
 ## Background
 
-`backgroundColor` fills the entire `<Box>` area and is **inherited by child
-`<Text>` components** unless a child sets its own `backgroundColor`:
+`backgroundColor` fills the whole `<Box>`, inside any border, and is
+**inherited by child `<Text>` components** unless a child sets its own
+`backgroundColor`:
 
 ```tsx
 import React from 'react';
