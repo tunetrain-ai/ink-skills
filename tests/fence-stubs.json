@@ -1,1 +1,3 @@
-{}
+{
+  "./app.js": "import React from 'react';\n\nexport default function App(_props: {name?: string; input: string[]}): React.JSX.Element {\n\treturn <></>;\n}\n"
+}
