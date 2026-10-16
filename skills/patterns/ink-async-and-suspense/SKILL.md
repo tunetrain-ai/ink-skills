@@ -8,12 +8,14 @@ metadata:
 
 # Async data and cleanup
 
-## Suspense requires `concurrent: true`
+## Suspense and `use()`
 
-`Suspense` boundaries only work correctly in Ink under React Concurrent Mode
-— pass `{concurrent: true}` to `render()` (see
-`ink-rendering-and-lifecycle`). Without it, a component that suspends won't
-resolve the way it does in a browser React app.
+`<Suspense>`, `use()` and `React.lazy` behave the same with Ink's default
+renderer and with `{concurrent: true}`: the fallback shows while the promise is
+pending, and the content replaces it once the promise has resolved. What
+`concurrent: true` changes is when the initial output is written: by default
+`render()` has written it before it returns, with `concurrent: true` it returns
+first (see `ink-rendering-and-lifecycle`).
 
 ```tsx
 import React from 'react';
@@ -24,9 +26,9 @@ const App = () => <Text>Hello</Text>;
 render(<App />, {concurrent: true});
 ```
 
-React 19's `use()` hook is the straightforward way to read a promise inside
-a component that's wrapped in `<Suspense>` — pass a **cached** promise (not
-a freshly created one on every render, or it'll suspend forever):
+React 19's `use()` hook reads a promise inside a component that's wrapped in
+`<Suspense>` — pass a **cached** promise: one created anew on every render that
+takes time to resolve keeps the fallback on screen.
 
 ```tsx
 import React, {Suspense, use} from 'react';
@@ -49,17 +51,15 @@ const Screen = () => (
 );
 ```
 
-For data-fetching patterns beyond a single cached promise (request
-deduplication, caching across renders, request cancellation), reach for a
-data-fetching library rather than hand-rolling a cache — the pattern above
-is the minimum needed to see `Suspense` actually work, not a caching
-strategy in itself.
+A single cached promise like this one holds one result for every caller; for
+several requests, request deduplication, caching across renders, or request
+cancellation, reach for a data-fetching library rather than hand-rolling a
+cache.
 
 ## Streaming subprocess output
 
 `child_process.spawn`'s stdout/stderr are Node readable streams — write
-their chunks into component state to render them as they arrive, same as
-any other async data source:
+their chunks into component state to render them as they arrive:
 
 ```tsx
 import React, {useEffect, useState} from 'react';
@@ -134,19 +134,20 @@ are different: spawn them with `stdio: 'inherit'` inside
 `useApp().suspendTerminal(async () => {…})`, which hands the terminal over and
 then restores Ink's terminal state with a full redraw.
 
-For output that's genuinely append-only and never revisited (most command
-output fits this), consider `<Static>` (see `ink-static-output`) instead of
-plain state — it avoids re-rendering already-printed lines as the list
-grows.
+For output that is append-only and never revisited, `<Static>` (see
+`ink-static-output`) is an alternative to plain state: it writes each line
+once and does not render the earlier lines again as the list grows.
 
 ## Cleanup on unmount
 
 The `useEffect` return function above (`child.kill()`, removing listeners) is
-the general pattern for anything that outlives a single render: timers,
-subscriptions, child processes, open file handles. **Skipping this is the
-most common cause of an Ink CLI that doesn't exit** — a live subprocess or an
-active timer keeps the Node event loop occupied even after the component
-tree unmounts (see `ink-rendering-and-lifecycle`'s process model). If a
-`useInput` handler's cleanup isn't the culprit, check for exactly this.
+the general pattern for anything that outlives a single render: timers, event
+listeners, child processes. **Skipping this leaves an Ink CLI that doesn't
+exit** — a live subprocess or an active timer keeps the Node event loop
+occupied even after the component tree unmounts (see
+`ink-rendering-and-lifecycle`'s process model). Ink releases a `useInput`
+handler's stdin listener and raw mode itself when the tree unmounts, so a
+process that stays alive afterwards is held by something of your own: check for
+exactly this.
 
 Related skills: ink-rendering-and-lifecycle, ink-animation-and-performance, ink-static-output

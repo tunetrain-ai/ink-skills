@@ -11,13 +11,12 @@ metadata:
 ## Multi-screen navigation
 
 Ink has no router of its own — screens are just conditional rendering, same
-as any React app. For anything beyond a couple of `if`/state-driven screens,
-[React Router](https://reactrouter.com)'s `MemoryRouter` is the standard
-choice: unlike `BrowserRouter`, it keeps the navigation stack in memory
-instead of relying on a browser history API, which is exactly what a
-terminal needs.
+as any React app. For anything beyond a couple of `if`/state-driven screens, use
+[React Router](https://reactrouter.com)'s `MemoryRouter`: it keeps the
+navigation stack in memory, while `BrowserRouter` needs a browser and throws
+`document is not defined` in Node.
 
-```tsx no-check
+```tsx
 import React from 'react';
 import {MemoryRouter, Routes, Route, useNavigate} from 'react-router';
 import {render, useInput, Text} from 'ink';
@@ -54,27 +53,28 @@ render(<App />);
 
 Three things that don't carry over from web routing:
 
-- **No `<Link>`** — it renders an `<a>` tag, which means nothing in a
-  terminal. Navigate with `useNavigate()` everywhere.
+- **No `<Link>`** — it renders an `<a>` element that Ink does not draw: text
+  inside it throws, and a `<Text>` inside it produces no output. Navigate with
+  `useNavigate()` everywhere.
 - `MemoryRouter` starts at `"/"` by default; pass `initialEntries` to start
   elsewhere (e.g. resuming at a route based on a CLI flag).
-- Routes aren't URLs — they're just an abstraction for conditional
-  rendering, a state machine of screens with the ergonomics of routing.
+- Routes aren't URLs: `<Routes>` renders only the element of the route that
+  matches the in-memory location, and the screen you leave is unmounted.
 
-Don't reach for a router at all for a linear wizard (step 1 → step 2 → done)
-— plain `useState` tracking a `step` value is simpler and there's no
-navigation stack to manage. Reach for `MemoryRouter` when screens can be
-revisited, deep-linked via `initialEntries`, or nested.
+A linear wizard (step 1 → step 2 → done) doesn't need a router: a `useState`
+holding a `step` value shows one screen at a time. `MemoryRouter` adds a history
+stack (`navigate(-1)` goes back), deep links via `initialEntries`, and nested
+routes (a parent route renders its children through `<Outlet />`).
 
 ## Parsing arguments and flags
 
-Ink renders UI; it has no opinion on argument parsing. The common pairing is
-[`meow`](https://github.com/sindresorhus/meow) — lightweight, built for
-exactly this, and what `create-ink-app`-scaffolded projects use by default —
-or Node's built-in `util.parseArgs` for a dependency-free CLI. Parse args
-*before* calling `render()`, then pass the results in as props:
+Ink renders UI; it has no opinion on argument parsing. `create-ink-app`
+scaffolds its projects with [`meow`](https://github.com/sindresorhus/meow), a
+CLI app helper, for arguments and flags; Node's built-in `util.parseArgs` does
+the same job without a dependency. Parse args *before* calling `render()`, then
+pass the results in as props:
 
-```tsx no-check
+```tsx
 import React from 'react';
 import meow from 'meow';
 import {render} from 'ink';
@@ -99,8 +99,8 @@ render(<App name={cli.flags.name} input={cli.input} />);
 Ink's `exit()` (from `useApp()`) controls when `waitUntilExit()` settles and
 whether it resolves or rejects — it does **not** by itself set the process's
 exit code. For a CLI that needs a specific exit code on failure, set
-`process.exitCode` before exiting (preferred over `process.exit(code)`,
-which terminates immediately and can cut off pending stdout writes):
+`process.exitCode` before exiting. Unlike `process.exit(code)`, which
+terminates immediately, it lets the process finish what is still scheduled:
 
 ```tsx
 import React from 'react';

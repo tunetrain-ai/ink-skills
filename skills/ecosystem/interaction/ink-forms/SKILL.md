@@ -62,15 +62,15 @@ password-style field), `integer` / `float` (with `min` / `max` / `step`),
 `select`, and `boolean` — there is **no** `multiselect` (use `@inkjs/ui`'s
 `MultiSelect`, `inkjs-ui-inputs`, or add your own field type through
 `customManagers`). There's also an
-imperative `openForm(options)` that returns a promise instead of rendering a
-controlled component — useful for a one-off prompt in an otherwise-imperative
-script.
+imperative `openForm(options)` that renders the form itself and returns a
+promise of the submitted value — useful for a one-off prompt in an
+otherwise-imperative script.
 
 ## Filterable select — `TextInput` + `Select` from `@inkjs/ui`
 
 `ink-quicksearch-input` cannot be used on Ink 8 (it peers `ink 2.6.x`, uses
 the removed `<Color>` component, and its CommonJS build fails to load). A
-filterable picker is a few lines with `@inkjs/ui` — no extra dependency:
+filterable picker needs nothing beyond `@inkjs/ui`:
 
 ```tsx
 import React, {useState} from 'react';
@@ -117,10 +117,9 @@ through `onChange`. (`Select` has no `onSubmit` — `onChange` is its
 selection callback.) See `ink-focus-management` if you need Tab to move
 between them instead.
 
-## A legacy confirm-input package exists too
+## `ink-confirm-input` — don't use it on Ink 8
 
-`ink-confirm-input` (a much older, pre-`@inkjs/ui` package) is another
-CommonJS build that fails to load on Ink 8. Use `@inkjs/ui`'s `ConfirmInput`
-(see `inkjs-ui-inputs`).
+`ink-confirm-input` is another CommonJS build that fails to load on Ink 8. Use
+`@inkjs/ui`'s `ConfirmInput` (see `inkjs-ui-inputs`).
 
 Related skills: inkjs-ui-inputs, ink-focus-management, ink-ecosystem-overview
