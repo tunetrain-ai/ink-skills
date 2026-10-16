@@ -70,3 +70,18 @@ test('pkg reads installed metadata, including a nested dependency of another pac
   assert.match(pkg('ink').version, /^8\./);
   assert.ok(pkg('cli-boxes', { from: 'ink' }).version);
 });
+
+test('findCaseInsensitive finds a file whatever the case of its name, in any path segment', async () => {
+  const { findCaseInsensitive } = await import('./harness.mjs');
+  const { mkdtempSync, mkdirSync, writeFileSync } = await import('node:fs');
+  const { join } = await import('node:path');
+  const { tmpdir } = await import('node:os');
+  const dir = mkdtempSync(join(tmpdir(), 'ink-skills-case-'));
+  mkdirSync(join(dir, 'Docs'));
+  writeFileSync(join(dir, 'Docs', 'readme.md'), 'x');
+  writeFileSync(join(dir, 'LICENSE'), 'y');
+  assert.equal(findCaseInsensitive(dir, 'docs/README.md'), join(dir, 'Docs', 'readme.md'));
+  assert.equal(findCaseInsensitive(dir, 'LICENSE'), join(dir, 'LICENSE'));
+  assert.equal(findCaseInsensitive(dir, './Docs/../docs/./README.md'), join(dir, 'Docs', 'readme.md'), 'dot segments are followed');
+  assert.throws(() => findCaseInsensitive(dir, 'docs/missing.md'), /no "missing.md"/);
+});

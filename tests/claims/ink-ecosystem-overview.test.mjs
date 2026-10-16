@@ -10,7 +10,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import semver from 'semver';
-import { skill, tsx, h, ink, mount, stripAnsi, loadEcosystem, ROOT, EXT, externalHarness, extImport, runIsolated, keys } from '../lib/index.mjs';
+import { skill, tsx, h, ink, mount, stripAnsi, loadEcosystem, ROOT, EXT, externalHarness, extImport, runIsolated, keys, findCaseInsensitive } from '../lib/index.mjs';
 import { allSkillFiles, loadFile } from '../lib/claims.mjs';
 import { renderTable } from '../../scripts/lib/ecosystem.mjs';
 import { installed, versionOf, loadsInCleanProcess, npmInstall, renderOnInk8, hasRecipe, projectOf } from './ink-ecosystem-overview.helpers.mjs';
@@ -428,7 +428,7 @@ const NOTES = {
       t.equal(typeof provider, 'function');
       const run = await runIsolated({ probe: 'ink-picture-stdin', project: 'external', env: { FORCE_COLOR: '0' }, tty: { isTTY: true, columns: 80, rows: 24 }, stdin: [] });
       t.ok(run.stdout.includes('\x1b[c') && run.stdout.includes('\x1b[16t'), 'on mount it writes terminal queries');
-      const readme = readFileSync(join(installed('ink-picture').dir, 'README.md'), 'utf8').replace(/\s+/g, ' ');
+      const readme = readFileSync(findCaseInsensitive(installed('ink-picture').dir, 'README.md'), 'utf8').replace(/\s+/g, ' ');
       t.ok(readme.includes('Always wrap your app with `InkPictureProvider`.'), 'and its README says to wrap the app in the provider');
     },
   },
@@ -512,7 +512,7 @@ const NOTES = {
       const mine = byName(q.tok('@pppp606/ink-chart'));
       t.notEqual(other.repository, mine.repository, 'unrelated: another repository');
       t.deepEqual(other.maintainers.filter((m) => mine.maintainers.includes(m)), [], 'and other maintainers');
-      const readme = readFileSync(join(installed('ink-chart').dir, 'README.md'), 'utf8');
+      const readme = readFileSync(findCaseInsensitive(installed('ink-chart').dir, 'README.md'), 'utf8');
       t.match(readme, /import Chart from 'ink-chart'/, 'ink-chart documents one default Chart component');
       const names = Object.keys(await import(mine.name));
       t.ok(['Sparkline', 'BarChart', 'LineGraph'].every((n) => names.includes(n)) && !names.includes('Chart'), 'a different API: named chart components');

@@ -2,7 +2,7 @@
 export { skill, tsx, registry } from './claims.mjs';
 export {
   React, ink, h, mount, makeHarness, keys, tick, sleep, waitFor, stripAnsi, screenOf, fakeStdout, fakeStdin,
-  catchRenderError, runIsolated, pkg, packageDir, readPackageFile, ROOT,
+  catchRenderError, runIsolated, pkg, packageDir, readPackageFile, findCaseInsensitive, ROOT,
 } from './harness.mjs';
 export {
   EXT, externalInstalled, requireExternal, extPkg, extPackageDir, extReadFile, resolveEntry, extImport,

@@ -6,7 +6,7 @@
 
 import { EventEmitter } from 'node:events';
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import React from 'react';
@@ -405,5 +405,30 @@ export function pkg(name, { from, base = ROOT } = {}) {
 /** Read a file inside an installed package. */
 export function readPackageFile(name, relPath, { from, base = ROOT } = {}) {
   const start = from ? packageDir(from, base) : base;
-  return readFileSync(join(packageDir(name, start), relPath), 'utf8');
+  return readFileSync(findCaseInsensitive(packageDir(name, start), relPath), 'utf8');
+}
+
+/**
+ * A path inside a package, tolerating a different case in any segment: macOS and Windows would open
+ * `README.md` for a package that ships `readme.md`, Linux would not, and which spelling a package
+ * uses is not something a claim is about.
+ */
+export function findCaseInsensitive(dir, relPath) {
+  let current = dir;
+  for (const segment of relPath.split('/')) {
+    if (segment === '' || segment === '.') continue;
+    if (segment === '..') {
+      current = dirname(current);
+      continue;
+    }
+    const exact = join(current, segment);
+    if (existsSync(exact) && readdirSync(current).includes(segment)) {
+      current = exact;
+      continue;
+    }
+    const match = existsSync(current) ? readdirSync(current).find((entry) => entry.toLowerCase() === segment.toLowerCase()) : undefined;
+    if (!match) throw new Error(`no "${segment}" in ${current}`);
+    current = join(current, match);
+  }
+  return current;
 }
