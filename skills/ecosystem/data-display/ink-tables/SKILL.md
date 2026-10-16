@@ -1,49 +1,59 @@
 ---
 name: ink-tables
-description: Render tabular data in an Ink terminal UI — using the ink-table package (data/columns/padding/header/cell/skeleton props) or a hand-rolled <Box>/<Text> grid when you need full control. Use when the user wants to display rows of data in columns.
+description: Render tabular data in an Ink terminal UI — using @alcalzone/ink-table (data/columns/padding/header/cell/skeleton props, per-column alignment) or a hand-rolled <Box>/<Text> grid when you need full control. Use when the user wants to display rows of data in columns.
 metadata:
-  ink: "7.1.1"
+  ink: "8.0.0"
   category: ecosystem
 ---
 
 # Tables
 
-## `ink-table`
+## `@alcalzone/ink-table`
 
-```tsx no-check
+The original `ink-table` is a CommonJS package that `require()`s Ink, so it
+throws `ERR_REQUIRE_ASYNC_MODULE` on Ink 8 and cannot be used (see
+`ink-ecosystem-overview`). `@alcalzone/ink-table` is an ESM fork with the same
+props and a **named** `Table` export. Its last release is old (2023) but it
+renders on Ink 8 and installs with strict peer dependencies.
+
+```sh
+npm install @alcalzone/ink-table
+```
+
+```tsx
 import React from 'react';
 import {render} from 'ink';
-import Table from 'ink-table';
+import {Table} from '@alcalzone/ink-table';
 
 const data = [
 	{name: 'Sosa Saunders', age: 17, email: 'sosa.saunders@mail.com'},
 	{name: 'Angelina Kirk', age: 3, email: 'angelina@kirk.io'},
 ];
 
-render(<Table data={data} />);
+render(<Table data={data} columns={['name', {key: 'age', align: 'right'}]} />);
 ```
 
 | Prop | Type | Notes |
 | --- | --- | --- |
-| `data` | `T[]` | Rows — array of objects. **Required.** |
-| `columns` | `(keyof T)[]` | Which keys to show as columns, in order. Defaults to all keys of the first row if omitted. |
+| `data` | `T[]` | Rows — array of plain objects whose values are `string \| number \| boolean \| null \| undefined`. **Required.** |
+| `columns` | `(keyof T \| {key: keyof T; align?: 'left' \| 'right' \| 'center'})[]` | Which keys to show, in order. Defaults to the union of the keys of **all** rows. |
 | `padding` | `number` | Cell padding. |
 | `header` | `(props) => JSX.Element` | Custom header-row renderer. |
-| `cell` | `(props) => JSX.Element` | Custom cell renderer. |
+| `cell` | `(props: {column: number; children}) => JSX.Element` | Custom cell renderer. |
 | `skeleton` | `(props) => JSX.Element` | Custom border/divider renderer. |
 
-Peer range predates Ink 7 (see `ink-ecosystem-overview`) — its layout is
-built on plain `<Box>`/`<Text>` primitives that haven't changed, so in
-practice it keeps working, but there's no current alternative package to
-recommend instead; verify it against your installed Ink version before
-depending on it in new code.
+`Table` is a class component and `T` must be an object type with scalar
+values: declare row types with `type Row = {…}` (an `interface` has no index
+signature and is rejected) or let TypeScript infer them from the array, as
+above. Nested objects and arrays are not supported as cell values — format
+them to strings first.
 
 ## Hand-rolled table
 
-When `ink-table`'s column/cell model doesn't fit (mixed cell content,
-per-cell coloring you don't want to route through a custom `cell` renderer,
-or avoiding a dependency for a small, fixed table), a table is just a
-`<Box flexDirection="column">` of row `<Box>`s with fixed-width cells:
+When the column/cell model doesn't fit (mixed cell content, per-cell coloring
+you don't want to route through a custom `cell` renderer, or avoiding a
+dependency for a small, fixed table), a table is just a
+`<Box flexDirection="column">` of row `<Box>`es with fixed-width cells:
 
 ```tsx
 import React from 'react';

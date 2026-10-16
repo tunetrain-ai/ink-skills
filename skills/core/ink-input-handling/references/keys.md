@@ -1,7 +1,13 @@
 # The `key` object (`useInput`)
 
 Passed as the second argument to the `useInput` handler: `(input, key) => {}`.
-All properties are `boolean`, default `false`, unless noted.
+All properties are `boolean` and default to `false`, except `eventType`, which is
+`undefined` without the kitty keyboard protocol. The kitty-only modifiers
+(`super`, `hyper`, `capsLock`, `numLock`) are always `false` without it.
+
+As of Ink 8, unrecognized control sequences (mouse reports, focus in/out,
+cursor-position reports) are dropped before `useInput` and never reach the
+handler.
 
 ## Arrows and navigation
 
@@ -10,7 +16,7 @@ All properties are `boolean`, default `false`, unless noted.
 | `leftArrow` / `rightArrow` / `upArrow` / `downArrow` | Arrow keys. |
 | `pageUp` / `pageDown` | Page Up / Page Down. |
 | `home` / `end` | Home / End. |
-| `return` | Return (Enter). |
+| `return` | Return (Enter), including keypad Enter. |
 | `escape` | Escape. |
 | `tab` | Tab. |
 | `backspace` | Backspace. |
@@ -46,7 +52,7 @@ All properties are `boolean`, default `false`, unless noted.
 - **`input` vs. actual typed text can diverge.** Without
   `reportAssociatedText`, `input` falls back to the primary unshifted key —
   composed/shifted text is not exposed. Enable `reportAssociatedText` (which
-  implies `reportAllKeysAsEscapeCodes`) to get real composed text in `input`.
+  automatically enables `reportAllKeysAsEscapeCodes`) to get real composed text in `input`.
 - **Previously-ambiguous keys become distinguishable**: `Ctrl+I` vs. `Tab`
   (`\x09` without the protocol — identical), `Shift+Enter` vs. `Enter`,
   `Escape` vs. `Ctrl+[`.

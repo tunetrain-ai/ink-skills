@@ -2,7 +2,7 @@
 name: ink-input-handling
 description: Handle keyboard input and pasted text in Ink with useInput and usePaste — the key object (arrows, ctrl, meta, function keys), isActive to scope multiple handlers, raw mode via useStdin, and the optional kitty keyboard protocol for richer key reporting. Use for "how do I read a keypress / handle Enter / detect paste / support Ctrl+C" questions.
 metadata:
-  ink: "7.1.1"
+  ink: "8.0.0"
   category: core
 ---
 
@@ -45,6 +45,10 @@ once (e.g. a modal on top of a list) so only one consumes a given keypress.
 This is also **why an Ink process stays alive**: an active `useInput` keeps
 the event loop occupied (see `ink-rendering-and-lifecycle`).
 
+As of Ink 8, unrecognized control sequences (mouse reports, focus in/out,
+cursor-position reports) are no longer delivered to `useInput`, and keypad
+Enter now sets `key.return`.
+
 See `references/keys.md` for the full `key` object (arrows, modifiers,
 navigation, and the kitty-protocol-only fields).
 
@@ -82,24 +86,34 @@ const MyInput = () => {
 ## Raw mode
 
 Ink automatically puts stdin in raw mode while any `useInput` hook is
-mounted, so keys arrive one at a time instead of buffered per line. If you
-need raw mode without `useInput` (rare), use `useStdin`'s `setRawMode` —
-**not** `process.stdin.setRawMode` directly, since Ink needs to intercept
-Ctrl+C itself. Always check `isRawModeSupported` first; `setRawMode` throws
-when the current stdin doesn't support it (e.g. piped input, some CI
-environments). See `ink-terminal-io`.
+mounted and active (`isActive !== false`), so keys arrive one at a time
+instead of buffered per line (`usePaste` and `useFocus` do the same while
+active). `useInput` and `usePaste` throw when stdin can't do raw mode (piped
+input, some CI environments), so pass `isActive: isRawModeSupported` (from
+`useStdin`) if your app can run without a TTY.
+
+If you need raw mode without `useInput` (rare), use `useStdin`'s
+`setRawMode` — **not** `process.stdin.setRawMode` directly, since Ink needs to
+intercept Ctrl+C itself. Always check `isRawModeSupported` first; `setRawMode`
+throws when the current stdin doesn't support it. See `ink-terminal-io`.
 
 ## Kitty keyboard protocol
 
-Opt in via `render(<App />, {kittyKeyboard: {mode: 'auto'}})` for terminals
-that support it (mode `'auto'` probes and falls back gracefully; `'enabled'`
-forces it and requires both stdin/stdout to be TTYs; `'disabled'` never
-enables it). It unlocks modifier keys and event types the base protocol
-can't report: `key.super`, `key.hyper`, `key.capsLock`, `key.numLock`, and
-`key.eventType` (`'press' | 'repeat' | 'release'`). Without it those fields
-are simply absent (`undefined`), not `false`.
+Opt in by passing a `kittyKeyboard` object to `render()` — omit it and the
+protocol is never enabled. `mode` defaults to `'auto'`, which only probes the
+terminal in interactive mode with TTY stdin/stdout; `'enabled'` forces it and
+requires both stdin/stdout to be TTYs; `'disabled'` never enables it. It
+unlocks modifier keys and event types the base protocol can't report:
+`key.super`, `key.hyper`, `key.capsLock`, `key.numLock`, and `key.eventType`
+(`'press' | 'repeat' | 'release'`). Without it `super`/`hyper`/`capsLock`/
+`numLock` are always `false` and `eventType` is `undefined`.
 
-```tsx no-check
+```tsx
+import React from 'react';
+import {render, Text} from 'ink';
+
+const MyApp = () => <Text>Press a key</Text>;
+
 render(<MyApp />, {
 	kittyKeyboard: {
 		mode: 'enabled',
@@ -109,8 +123,8 @@ render(<MyApp />, {
 ```
 
 Enabling `reportAllKeysAsEscapeCodes` (or `reportAssociatedText`, which
-implies it) changes what `input` contains for non-printable keys — see
-`references/keys.md` for the full behavior-change list before turning this
-on for anything beyond arrow/navigation keys.
+automatically enables it) changes what `input` contains for non-printable
+keys — see `references/keys.md` for the full behavior-change list before
+turning this on for anything beyond arrow/navigation keys.
 
 Related skills: ink-getting-started, ink-focus-management, ink-terminal-io

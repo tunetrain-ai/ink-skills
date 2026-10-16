@@ -22,6 +22,7 @@ jobs:
   publish-npm:
     name: Publish to npm
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       id-token: write # required for npm trusted publishing (OIDC) — no NPM_TOKEN secret needed
@@ -29,19 +30,30 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       dry_run: ${{ steps.dry-run.outputs.value }}
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: '22'
+          persist-credentials: false
+
+      # No `cache: npm` here: this job can mint an OIDC publish token, so it must
+      # not restore anything another workflow run was able to write.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
-          cache: npm
 
-      # Trusted publishing (OIDC) requires a modern npm CLI.
-      - name: Ensure npm supports OIDC trusted publishing
-        run: npm install -g npm@latest && npm --version
+      # Trusted publishing needs npm >= 11.5.1. Node 24 bundles a new enough npm;
+      # assert it instead of running an unpinned `npm install -g npm@latest`
+      # with a publish token in reach.
+      - name: Require an npm that supports trusted publishing
+        run: |
+          node -e '
+            const [major, minor, patch] = process.argv[1].split(".").map(Number);
+            const ok = major > 11 || (major === 11 && (minor > 5 || (minor === 5 && patch >= 1)));
+            if (!ok) { console.error(`npm ${process.argv[1]} is too old for trusted publishing (need >=11.5.1)`); process.exit(1); }
+            console.log(`npm ${process.argv[1]} supports trusted publishing`);
+          ' "$(npm --version)"
 
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
       - name: Read package version
         id: version
@@ -49,31 +61,35 @@ jobs:
 
       - name: Verify tag matches package.json version
         if: github.event_name == 'push'
+        env:
+          PKG_VERSION: ${{ steps.version.outputs.version }}
         run: |
           tag="${GITHUB_REF#refs/tags/v}"
-          pkg="${{ steps.version.outputs.version }}"
-          if [ "$tag" != "$pkg" ]; then
-            echo "::error::Tag v$tag does not match package.json version $pkg"
+          if [ "$tag" != "$PKG_VERSION" ]; then
+            echo "::error::Tag v$tag does not match package.json version $PKG_VERSION"
             exit 1
           fi
 
       - name: Determine dry-run mode
         id: dry-run
+        env:
+          EVENT: ${{ github.event_name }}
+          DRY_RUN_INPUT: ${{ inputs.dry_run }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then
+          if [ "$EVENT" = "workflow_dispatch" ] && [ "$DRY_RUN_INPUT" = "true" ]; then
             echo "value=true" >> "$GITHUB_OUTPUT"
           else
             echo "value=false" >> "$GITHUB_OUTPUT"
           fi
 
       # Never release content that hasn't passed the same gate as every PR.
-      - name: Validate and typecheck
+      - name: Validate, typecheck, and smoke-import
         run: npm run check
 
       - name: Verify generated files are up to date
         run: |
           npm run index
-          git diff --exit-code -- skills.sh.json .claude-plugin README.md
+          git diff --exit-code -- skills.sh.json .claude-plugin README.md docs/SOURCES.md skills/ecosystem/ink-ecosystem-overview/SKILL.md
 
       - name: Publish (dry run)
         if: steps.dry-run.outputs.value == 'true'
@@ -88,23 +104,25 @@ jobs:
     needs: publish-npm
     if: needs.publish-npm.outputs.dry_run == 'false'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: '22'
-          cache: npm
+          persist-credentials: false
 
-      - run: npm ci
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+
+      - run: npm ci --ignore-scripts
 
       - name: Build tarball for the release asset
         run: npm pack
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: v${{ needs.publish-npm.outputs.version }}
           generate_release_notes: true

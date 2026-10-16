@@ -2,7 +2,7 @@
 name: ink-fullscreen-layouts
 description: Build full-screen, responsive Ink layouts — the alternateScreen render option for vim/htop-style apps, sizing to the terminal with useWindowSize, and split-pane layouts using flexGrow. Use when the user wants a full-screen TUI, a resizable/responsive layout, or a multi-pane app.
 metadata:
-  ink: "7.1.1"
+  ink: "8.0.0"
   category: patterns
 ---
 
@@ -15,7 +15,12 @@ alternate screen — the same mechanism vim, htop, and less use. On exit, the
 original terminal content is restored exactly as it was, and while active
 the app's output never touches the user's normal scrollback.
 
-```tsx no-check
+```tsx
+import React from 'react';
+import {render, Text} from 'ink';
+
+const App = () => <Text>Full-screen app</Text>;
+
 render(<App />, {alternateScreen: true});
 ```
 
@@ -60,6 +65,13 @@ const FullScreenApp = () => {
 Setting a `<Box>`'s `height` to `rows` (or `columns` for width) is what makes
 a layout genuinely full-screen rather than just as tall as its content —
 `<Box>` doesn't implicitly fill the terminal on its own.
+
+For a scrollable pane, give a fixed-height `<Box overflow="hidden">` a
+`contentOffsetY` (Ink 8) and clamp it to `content.height - viewport.clientHeight`,
+reading both from `useBoxMetrics()` / `measureElement()` — `clientHeight` from
+the viewport, `height` from an inner content wrapper. `clientHeight` excludes
+borders but not padding, so put padding on the wrapper, not the viewport. See
+`ink-layout`'s scrollable-view reference.
 
 ## Split panes
 

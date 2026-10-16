@@ -1,10 +1,18 @@
 name: Refresh upstream versions
 
-# Weekly check for whether ink/@inkjs/ui/the ecosystem packages pinned in
-# docs/SOURCES.md have moved. Opens a PR when they have — it does not edit
-# any skill content itself (see the note in check-upstream-drift.mjs on why:
-# API drift needs a human to re-read the actual .d.ts files, not just diff
-# version numbers — see docs/SOURCES.md's own note on this).
+# Weekly check for whether ink and the ecosystem packages tracked in
+# data/ecosystem.json have moved. Opens a PR when they have — it refreshes the
+# registry-derived fields and the tables generated from them, nothing else (see
+# the header of scripts/check-upstream-drift.mjs for why: whether a package
+# works on the current Ink needs a human to re-probe it, not a version diff).
+#
+# One-time repo setting this depends on: Settings → Actions → General →
+# "Allow GitHub Actions to create and approve pull requests". Without it the
+# last step fails with "GitHub Actions is not permitted to create or approve
+# pull requests".
+#
+# PRs opened with GITHUB_TOKEN do not trigger other workflows, so CI does not
+# run on the refresh PR by itself: close and reopen it to run CI.
 
 on:
   schedule:
@@ -12,36 +20,48 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   check-drift:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      # Credentials stay persisted here (the other workflows disable that):
+      # create-pull-request pushes the branch with them.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '22'
+          node-version: '24'
           cache: npm
 
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
-      - name: Resolve current upstream versions
+      - name: Resolve current registry state
         run: npm run fetch-sources
 
-      - name: Compare against docs/SOURCES.md
+      - name: Compare against data/ecosystem.json
         id: drift
         run: npm run check-drift
 
+      - name: Regenerate the tables derived from the data
+        if: steps.drift.outputs.changed == 'true'
+        run: npm run index
+
       - name: Open or update PR
         if: steps.drift.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
-          commit-message: 'docs: bump pinned upstream versions in SOURCES.md'
-          title: 'upstream: dependency versions have moved'
+          commit-message: 'upstream: refresh ecosystem registry data'
+          title: 'upstream: ecosystem packages have moved'
           body-path: .sources/drift-summary.md
           branch: chore/refresh-upstream
-          add-paths: docs/SOURCES.md
+          add-paths: |
+            data/ecosystem.json
+            docs/SOURCES.md
+            skills/ecosystem/ink-ecosystem-overview/SKILL.md
           labels: upstream-drift

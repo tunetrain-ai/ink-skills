@@ -37,23 +37,41 @@
     "validate": "node scripts/validate.mjs",
     "typecheck": "node scripts/typecheck-snippets.mjs",
     "index": "node scripts/generate-index.mjs",
-    "check": "npm run validate && npm run typecheck",
+    "check": "npm run validate && npm run typecheck && npm run smoke",
     "fetch-sources": "node scripts/fetch-sources.mjs",
     "check-drift": "node scripts/check-upstream-drift.mjs",
-    "format": "prettier --write \"skills/**/*.md\" \"*.md\" \"scripts/**/*.mjs\""
+    "format": "prettier --write \"skills/**/*.md\" \"*.md\" \"scripts/**/*.mjs\"",
+    "version": "npm run index && git add skills.sh.json .claude-plugin README.md docs skills",
+    "smoke": "node scripts/smoke-imports.mjs"
   },
   "devDependencies": {
+    "@alcalzone/ink-table": "^1.1.1",
     "@inkjs/ui": "^2.0.0",
-    "@types/node": "^22.10.2",
-    "@types/react": "^19.2.0",
-    "ink": "^7.1.1",
+    "@pppp606/ink-chart": "^0.2.8",
+    "@types/marked-terminal": "^6.1.1",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "cli-highlight": "^2.1.11",
+    "cli-spinners": "^3.4.0",
+    "ink": "^8.0.0",
+    "ink-big-text": "^2.0.0",
+    "ink-form": "^2.0.2",
+    "ink-gradient": "^4.0.1",
+    "ink-link": "^5.0.0",
+    "ink-spawn": "^0.1.4",
+    "ink-task-list": "^2.0.0",
     "ink-testing-library": "^4.0.0",
-    "prettier": "^3.4.2",
-    "react": "^19.2.0",
-    "typescript": "^5.7.2",
-    "yaml": "^2.6.1"
+    "marked": "^15.0.12",
+    "marked-terminal": "^7.3.0",
+    "prettier": "^3.9.10",
+    "react": "^19.3.1",
+    "semver": "^7.8.5",
+    "skills": "^1.7.2",
+    "string-width": "^8.3.0",
+    "typescript": "^7.0.2",
+    "yaml": "^2.9.1"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   }
 }

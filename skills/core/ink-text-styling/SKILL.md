@@ -2,7 +2,7 @@
 name: ink-text-styling
 description: Style and control text output in Ink — <Text> color/backgroundColor/bold/italic/underline/strikethrough/inverse/dimColor/wrap, <Newline>, <Spacer>, and <Transform> for post-processing rendered output (uppercase, hanging indent, gradients). Use for anything about how text looks or wraps.
 metadata:
-  ink: "7.1.1"
+  ink: "8.0.0"
   category: core
 ---
 
@@ -134,8 +134,16 @@ render(<Example />);
 `transform` is called once per rendered line, with the zero-indexed line
 number as the second argument — useful for a hanging indent:
 
-```tsx no-check
-const HangingIndent = ({indent = 4, children}) => (
+```tsx
+import React, {type ReactNode} from 'react';
+import {render, Text, Transform} from 'ink';
+
+type HangingIndentProps = {
+	indent?: number;
+	children: ReactNode;
+};
+
+const HangingIndent = ({indent = 4, children}: HangingIndentProps) => (
 	<Transform
 		transform={(line, index) =>
 			index === 0 ? line : ' '.repeat(indent) + line
@@ -143,6 +151,12 @@ const HangingIndent = ({indent = 4, children}) => (
 	>
 		{children}
 	</Transform>
+);
+
+render(
+	<HangingIndent>
+		<Text>First line stays flush{'\n'}continuation lines are indented</Text>
+	</HangingIndent>,
 );
 ```
 

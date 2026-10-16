@@ -2,7 +2,7 @@
 name: ink-focus-management
 description: Manage focus between interactive components in Ink with useFocus and useFocusManager — Tab/Shift+Tab cycling, autoFocus, isActive, focus ids for jumping directly to a component, and reading/setting the active focused component. Use when building forms, menus, or any UI with multiple selectable/focusable elements.
 metadata:
-  ink: "7.1.1"
+  ink: "8.0.0"
   category: core
 ---
 
@@ -11,9 +11,10 @@ metadata:
 ## `useFocus(options?)` — make a component focusable
 
 Calling `useFocus()` registers the component as "focusable"; when the user
-presses **Tab**, Ink moves focus through focusable components in the order
-they were rendered. Returns `{isFocused}` (and `focus(id)`, equivalent to the
-one on `useFocusManager()` below, scoped to this hook call).
+presses **Tab**, Ink moves focus through focusable components in registration
+order (reordering keyed components does not change it). Returns `{isFocused}`
+and `focus(id)` — the same global function as `focus` on `useFocusManager()`
+below, not scoped to this component. Pressing **Esc** clears the active focus.
 
 ```tsx
 import React from 'react';
@@ -32,7 +33,7 @@ render(<Example />);
 | --- | --- | --- | --- |
 | `autoFocus` | `boolean` | `false` | Focus this component automatically if nothing else is focused yet. |
 | `isActive` | `boolean` | `true` | Set `false` to disable focus *without* removing the component from the tab order — for a temporarily-disabled input. |
-| `id` | `string` | — | A stable id for jumping to this component with `focus(id)` directly, instead of cycling. Must be unique among focusable components. |
+| `id` | `string` | — | A stable id for jumping to this component with `focus(id)` directly, instead of cycling. Must be unique among focusable components (duplicates share one slot in the tab order). |
 
 ## `useFocusManager()` — control focus programmatically
 
@@ -40,10 +41,10 @@ render(<Example />);
 | --- | --- |
 | `enableFocus()` | Re-enable focus management (on by default — only needed after `disableFocus()`). |
 | `disableFocus()` | Disable focus management for all components; the active component loses focus. |
-| `focusNext()` | Move to the next focusable component (what Ink calls internally on Tab). Wraps to the first if none is active or the last was focused. |
-| `focusPrevious()` | Move to the previous component (what Ink calls on Shift+Tab). Wraps to the last if none is active or the first was focused. |
-| `focus(id)` | Jump directly to the component registered with that `id`. No-op if no component has that id. |
-| `activeId` | `string \| undefined` — the currently focused component's id, if it set one. |
+| `focusNext()` | Move to the next focusable component (what Ink calls internally on Tab). Goes to the first if none is active; wraps to the first from the last. |
+| `focusPrevious()` | Move to the previous component (what Ink calls on Shift+Tab). Goes to the last if none is active; wraps to the last from the first. |
+| `focus(id)` | Jump directly to the component registered with that `id`. No-op if no component with that id exists or it has `isActive: false`. |
+| `activeId` | `string \| undefined` — the focused component's id (auto-generated if it didn't set `id`), or `undefined` if nothing is focused. |
 
 ```tsx
 import React from 'react';

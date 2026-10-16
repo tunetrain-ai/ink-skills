@@ -1,8 +1,8 @@
 ---
 name: ink-layout
-description: Lay out terminal UI with Ink's <Box>, a Yoga flexbox container — width/height, padding/margin, gap, flex-grow/shrink/basis, flexDirection, alignItems/justifyContent, position, overflow, and measuring a box at runtime with measureElement/useBoxMetrics. Use for any "how do I position/size/center/space out" question in Ink.
+description: Lay out terminal UI with Ink's <Box>, a Yoga flexbox container — width/height, padding/margin, gap, flex-grow/shrink/basis, flexDirection, alignItems/justifyContent, position, overflow, scrolling with contentOffsetX/contentOffsetY, and measuring a box at runtime with measureElement/useBoxMetrics. Use for any "how do I position/size/center/space out" question in Ink.
 metadata:
-  ink: "7.1.1"
+  ink: "8.0.0"
   category: core
 ---
 
@@ -52,8 +52,9 @@ const VerticalList = () => (
 ## Sizing units are terminal cells, not pixels
 
 `width`/`height` are counted in character columns/rows. Percentages resolve
-against the parent's resolved size. `minWidth`/`maxWidth` do not (yet) support
-percentages (an upstream Yoga limitation).
+against the parent's resolved size. `minWidth`/`maxWidth` accept only numbers
+(cells); percentage strings are a type error. `minHeight`/`maxHeight` still
+accept percentages.
 
 ## Spacing: `gap` vs `margin` vs `padding`
 
@@ -112,10 +113,13 @@ const StatusLine = () => (
 
 ## Measuring a box at runtime
 
-`measureElement(ref)` and the `useBoxMetrics(ref)` hook both return a box's
-resolved layout: `{x, y, width, height}` for `measureElement`,
-`{width, height, left, top, hasMeasured}` for `useBoxMetrics`. Two
-differences:
+`measureElement(ref.current)` and the `useBoxMetrics(ref)` hook both return a
+box's resolved layout, and both return zeros until the first layout pass:
+
+- `measureElement` → `{x, y, width, height, clientWidth, clientHeight}`
+- `useBoxMetrics` → `{width, height, left, top, clientWidth, clientHeight, hasMeasured}`
+
+Two differences:
 
 - `useBoxMetrics` is a hook that **re-renders your component** when layout
   changes (resize, content changes); `measureElement` is an **imperative,
@@ -125,24 +129,30 @@ differences:
 - `measureElement` takes a non-null `DOMElement`, so guard `ref.current`
   before calling it (a ref is `null` until the element mounts).
 
+`clientWidth`/`clientHeight` are the size excluding borders but **not**
+padding. `left`/`top` are relative to the parent and `x`/`y` accumulate up the
+layout tree; neither includes an ancestor's `contentOffsetX`/`contentOffsetY`,
+so subtract the offset when hit-testing inside a scrolled box.
+
 ```tsx
-import React, {useRef, useEffect} from 'react';
+import React, {useRef, useEffect, useState} from 'react';
 import {render, measureElement, Box, Text} from 'ink';
 import type {DOMElement} from 'ink';
 
 const Example = () => {
 	const ref = useRef<DOMElement | null>(null);
+	const [width, setWidth] = useState(0);
 
 	useEffect(() => {
 		if (!ref.current) return;
-		const {width, height} = measureElement(ref.current);
 		// only reliable here — post-render
+		setWidth(measureElement(ref.current).width);
 	}, []);
 
 	return (
 		<Box width={100}>
-			<Box ref={ref}>
-				<Text>This box will stretch to 100 width</Text>
+			<Box ref={ref} flexGrow={1}>
+				<Text>This box grows to 100 columns, measured: {width}</Text>
 			</Box>
 		</Box>
 	);
@@ -153,14 +163,15 @@ render(<Example />);
 
 ## Scrolling a long list
 
-Ink 7 has no built-in scroll-offset primitive on `<Box>` — there's no CSS
-`overflow: scroll` equivalent that shifts already-laid-out content. The
-practical pattern is **windowing**: track a scroll index in state and render
-only the slice of items that fits, using `useWindowSize` or a fixed viewport
-`height` to decide how many rows fit. See `references/scrollable-view.md` for
-a full component. For a drop-in solution instead of hand-rolling this, see
-`ink-navigation` for `ink-scroll-view`, `ink-scroll-list`, and
-`ink-virtual-list` (all three implement the same windowing idea, with
-variable item heights, keyboard navigation, and edge cases already handled).
+`<Box>` has `contentOffsetX`/`contentOffsetY` (cells, default `0`) that shift
+its children left/up. Put the content in a fixed-size `overflow="hidden"`
+viewport and set `contentOffsetY={scrollTop}`; clamp `scrollTop` to
+`content.height - viewport.clientHeight`, both measured with `useBoxMetrics`.
+See `references/scrollable-view.md` for a full component.
+
+Everything inside a `contentOffset` viewport is still laid out, so for very
+large or unbounded lists render only a slice of the items (windowing) instead —
+that file shows it too. `ink-navigation` covers drop-in libraries
+(`ink-scroll-view`, `ink-scroll-list`, `ink-virtual-list`).
 
 Related skills: ink-getting-started, ink-borders-and-backgrounds, ink-fullscreen-layouts, ink-terminal-io

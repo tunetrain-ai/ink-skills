@@ -2,7 +2,7 @@
 name: ink-animation-and-performance
 description: Animate Ink components with useAnimation (frame/time/delta/reset, a single shared internal timer), and tune render performance with maxFps, incrementalRendering, and concurrent mode (useTransition/useDeferredValue). Use for spinners, progress animations, or "my UI updates too fast/flickers" performance questions.
 metadata:
-  ink: "7.1.1"
+  ink: "8.0.0"
   category: core
 ---
 
@@ -55,7 +55,9 @@ fast-updating UIs:
   cut CPU.
 - **`incrementalRendering`** (default `false`) redraws only the lines that
   changed instead of the whole frame — reduces flicker on wide/tall UIs
-  that update small regions frequently.
+  that update small regions frequently. It also skips each changed line's
+  unchanged prefix when safe; lines with unsupported terminal controls fall
+  back to a whole-line redraw.
 - **`concurrent`** (default `false`) turns on React Concurrent Mode:
   `Suspense` boundaries behave correctly with async data, and
   `useTransition`/`useDeferredValue` become functional, letting updates be

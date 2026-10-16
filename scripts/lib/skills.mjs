@@ -4,9 +4,12 @@
 
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parse as parseYaml } from 'yaml';
 
-export const ROOT = new URL('../../', import.meta.url).pathname.replace(/\/$/, '');
+// fileURLToPath, not URL.pathname: pathname keeps percent-encoding (a checkout
+// path containing a space breaks) and yields "/C:/..." on Windows.
+export const ROOT = fileURLToPath(new URL('../../', import.meta.url)).replace(/[\\/]$/, '');
 export const SKILLS_DIR = join(ROOT, 'skills');
 export const MAX_DEPTH = 3; // matches skills CLI's DEFAULT_SKILL_CONTAINER_DEPTH
 

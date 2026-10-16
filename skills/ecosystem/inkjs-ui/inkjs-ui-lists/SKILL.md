@@ -2,7 +2,7 @@
 name: inkjs-ui-lists
 description: "@inkjs/ui UnorderedList and OrderedList components (with .Item subcomponents) for rendering nested bullet/numbered lists with correct terminal indentation. Use when the user wants a bullet list, numbered list, or nested list rendered in the terminal."
 metadata:
-  ink: "7.1.1"
+  ink: "8.0.0"
   category: ecosystem
 ---
 

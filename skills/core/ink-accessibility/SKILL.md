@@ -1,8 +1,8 @@
 ---
 name: ink-accessibility
-description: Make an Ink UI screen-reader friendly — enable screen reader support (isScreenReaderEnabled / INK_SCREEN_READER env var), detect it at runtime with useIsScreenReaderEnabled, and use aria-label/aria-hidden/aria-role/aria-state on <Box> and <Text> to give elements semantic meaning. Use when the user asks about accessibility, screen readers, or ARIA in a terminal app.
+description: Make an Ink UI screen-reader friendly — enable screen reader support (isScreenReaderEnabled / INK_SCREEN_READER env var), detect it at runtime with useIsScreenReaderEnabled, and use aria-label/aria-hidden (on <Box> and <Text>) and aria-role/aria-state (on <Box> only) to give elements semantic meaning. Use when the user asks about accessibility, screen readers, or ARIA in a terminal app.
 metadata:
-  ink: "7.1.1"
+  ink: "8.0.0"
   category: core
 ---
 
@@ -18,7 +18,12 @@ Either pass `isScreenReaderEnabled: true` to `render()`, or set the
 `INK_SCREEN_READER` environment variable to `true` — useful for enabling it
 without touching render call sites, e.g. in a launcher script.
 
-```tsx no-check
+```tsx
+import React from 'react';
+import {render, Text} from 'ink';
+
+const MyApp = () => <Text>Hello</Text>;
+
 render(<MyApp />, {isScreenReaderEnabled: true});
 ```
 
@@ -42,14 +47,19 @@ const Example = () => {
 };
 ```
 
-## ARIA props on `<Box>` and `<Text>`
+## ARIA props
 
-| Prop | Type | Notes |
-| --- | --- | --- |
-| `aria-label` | `string` | Overrides what's read for this element — use when the visible text alone isn't descriptive enough. |
-| `aria-hidden` | `boolean` (default `false`) | Removes the element from the screen-reader tree entirely. |
-| `aria-role` | `string` | One of: `button`, `checkbox`, `combobox`, `list`, `listbox`, `listitem`, `menu`, `menuitem`, `option`, `progressbar`, `radio`, `radiogroup`, `tab`, `tablist`, `table`, `textbox`, `timer`, `toolbar`. |
-| `aria-state` | `object` | Any of `busy`, `checked`, `disabled`, `expanded`, `multiline`, `multiselectable`, `readonly`, `required`, `selected` (all `boolean`). |
+`aria-label` and `aria-hidden` work on both `<Box>` and `<Text>`; `aria-role`
+and `aria-state` are `<Box>`-only — `<Text>` silently ignores them, and
+TypeScript won't flag it (hyphenated JSX attributes skip excess-property
+checks). All four only change output while screen reader support is enabled.
+
+| Prop | On | Type | Notes |
+| --- | --- | --- | --- |
+| `aria-label` | `<Box>`, `<Text>` | `string` | Overrides what's read for this element — use when the visible text alone isn't descriptive enough. |
+| `aria-hidden` | `<Box>`, `<Text>` | `boolean` (default `false`) | Removes the element from the screen-reader tree entirely. |
+| `aria-role` | `<Box>` | `string` | One of: `button`, `checkbox`, `combobox`, `list`, `listbox`, `listitem`, `menu`, `menuitem`, `option`, `progressbar`, `radio`, `radiogroup`, `tab`, `tablist`, `table`, `textbox`, `timer`, `toolbar`. |
+| `aria-state` | `<Box>` | `object` | Any of `busy`, `checked`, `disabled`, `expanded`, `multiline`, `multiselectable`, `readonly`, `required`, `selected` (all `boolean`). |
 
 ```tsx
 import React from 'react';
@@ -88,9 +98,7 @@ const Progress = () => (
   when the visual layout wouldn't make sense read linearly (e.g. a table —
   see `ink-tables` — probably needs a row-by-row spoken summary rather than
   reading the grid character by character).
-- `@inkjs/ui` components (see the `inkjs-ui-*` skills) already wire up
-  sensible ARIA roles/state internally — prefer them over hand-rolled
-  interactive elements when accessibility matters and the built-in behavior
-  fits.
+- `@inkjs/ui` components (see the `inkjs-ui-*` skills) don't set ARIA props
+  themselves — wrap them in a `<Box aria-role=… aria-state=…>` yourself.
 
 Related skills: ink-text-styling, inkjs-ui-feedback, ink-tables

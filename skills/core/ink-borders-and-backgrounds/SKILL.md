@@ -2,7 +2,7 @@
 name: ink-borders-and-backgrounds
 description: Add borders and background colors to Ink's <Box> — borderStyle presets (single, double, round, bold, classic), custom border glyphs, per-edge borderColor/borderDimColor/borderBackgroundColor, showing/hiding individual edges, and backgroundColor fill and inheritance. Use when the user wants a bordered panel, box background, or custom box-drawing characters.
 metadata:
-  ink: "7.1.1"
+  ink: "8.0.0"
   category: core
 ---
 
@@ -13,7 +13,7 @@ metadata:
 `borderStyle` adds a border; unset (the default) means no border. Presets
 come from [`cli-boxes`](https://github.com/sindresorhus/cli-boxes):
 `single`, `double`, `round`, `bold`, `singleDouble`, `doubleSingle`,
-`classic`.
+`classic`, `arrow`.
 
 ```tsx
 import React from 'react';

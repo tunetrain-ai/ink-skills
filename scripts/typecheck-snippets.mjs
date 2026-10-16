@@ -44,6 +44,8 @@ async function main() {
   const skills = await discoverSkillFiles();
   let fenceCount = 0;
   let skipCount = 0;
+  /** @type {Map<string, number>} fences opted out with `no-check`, per source file */
+  const skippedByFile = new Map();
 
   for (const skill of skills) {
     const sources = [
@@ -61,6 +63,8 @@ async function main() {
         const fence = fences[i];
         if (fence.noCheck) {
           skipCount++;
+          const rel = relative(ROOT, source.path);
+          skippedByFile.set(rel, (skippedByFile.get(rel) ?? 0) + 1);
           continue;
         }
         fenceCount++;
@@ -87,6 +91,13 @@ async function main() {
     `Extracted ${fenceCount} snippet(s) (${skipCount} tagged no-check and skipped) ` +
       `from ${skills.length} skill(s).`
   );
+  // Make the coverage gap visible: these fences are NOT verified against real types.
+  if (skippedByFile.size > 0) {
+    console.log('Unchecked (no-check) fences by file:');
+    for (const [file, count] of [...skippedByFile].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))) {
+      console.log(`  ${String(count).padStart(2)}  ${file}`);
+    }
+  }
 
   if (fenceCount === 0) {
     console.log('Nothing to typecheck.');
