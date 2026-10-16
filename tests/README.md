@@ -124,6 +124,14 @@ registered claim *passed* in the run it reads. Default timeouts are generous (60
 type fixture) because they only matter for a failing claim, and CI runners are slower and busier than a
 laptop; `CLAIMS_CONCURRENCY` (default 4) sets how many files run at once.
 
+## Colour inside a claim
+
+`node --test` gives every test file `FORCE_COLOR=1`, whatever the parent sets. The root project's chalk
+still reaches level 3 through `COLORTERM=truecolor`, but Ink 8's own chalk takes `FORCE_COLOR` literally
+and draws 16 colours (`#4aaa1a` becomes `\x1b[32m`). So a claim must not hard-code `38;2;r;g;b` for text
+that *Ink* coloured: ask Ink what it writes for that colour and compare with that (see `sgrOf` in the
+`ink-charts` and `ink-borders-and-backgrounds` claims). `tests/mutate.mjs` runs at the same level.
+
 ## What the gate counts (`tests/coverage.mjs`)
 
 Units, from the markdown lexer: frontmatter description sentences, prose and list sentences, each

@@ -23,7 +23,9 @@ if (process.env.CLAIMS_MUTATE_CHILD !== '1') {
   // background job provides
   const child = spawn(process.execPath, [fileURLToPath(import.meta.url), ...process.argv.slice(2)], {
     cwd: ROOT,
-    env: testEnv({ CLAIMS_MUTATE_CHILD: '1', CLAIMS_COLLECT: '1' }),
+    // FORCE_COLOR=1 is what `node --test` hands every test file, whatever the parent's value is: the
+    // claims run at that level, so the audit must too (Ink's chalk takes it literally: 16 colours)
+    env: testEnv({ CLAIMS_MUTATE_CHILD: '1', CLAIMS_COLLECT: '1', FORCE_COLOR: '1' }),
     stdio: ['pipe', 'inherit', 'inherit'],
   });
   child.on('exit', (status) => process.exit(status ?? 1));
