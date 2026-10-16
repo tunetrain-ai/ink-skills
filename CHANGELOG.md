@@ -71,6 +71,10 @@ All notable changes to this project are documented in this file.
   tracking issue instead of a PR; it fails loudly when the registry is
   unreachable instead of reporting "no drift", and flags a newer Ink or a status
   that contradicts a peer range.
+- `tsconfig.json` sets `types: ["node"]`. Without it Ink's `NodeJS.WritableStream`
+  resolved to `any`, so the typecheck could not notice that `stdout.columns` no
+  longer compiles on Ink 8 (only `columns`/`rows`/`isTTY` are rejected;
+  `stdout.on('resize', …)` still compiles).
 - `scripts/lib/skills.mjs` resolves the repo root with `fileURLToPath`, so a
   checkout path containing a space or on Windows works.
 - `generate-index.mjs` fails on a skill in a category with no `CATEGORY_META`

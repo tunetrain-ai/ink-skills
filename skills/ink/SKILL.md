@@ -42,7 +42,7 @@ answer and defer to it.
 | Skill | Use when the task involves… |
 | --- | --- |
 | `ink-getting-started` | scaffolding a new Ink project, `create-ink-app`, TypeScript/ESM/Babel setup, the `bin` field |
-| `ink-rendering-and-lifecycle` | `render()` options, the returned `Instance`, `renderToString`, exiting/`waitUntilExit`, CI rendering behavior |
+| `ink-rendering-and-lifecycle` | `render()` options, the returned `Instance`, `renderToString`, exiting/`waitUntilExit`, `suspendTerminal` (hand the terminal to `$EDITOR`/`less`), CI rendering behavior |
 | `ink-layout` | `<Box>`, flexbox props (`flexDirection`, `gap`, `alignItems`…), dimensions, `measureElement`, `useBoxMetrics`, `contentOffsetX`/`contentOffsetY` scroll views, `clientWidth`/`clientHeight` |
 | `ink-text-styling` | `<Text>` styling (color, bold, wrap), `<Newline>`, `<Spacer>`, `<Transform>` |
 | `ink-borders-and-backgrounds` | `borderStyle`/`borderColor` (incl. per-edge), box and border backgrounds |

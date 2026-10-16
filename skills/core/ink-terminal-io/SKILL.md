@@ -17,8 +17,9 @@ writes a plain string **without tearing Ink's managed output** — similar to
 `<Static>`, but for a one-off string instead of a list of components.
 
 `stdout`/`stderr` are typed `NodeJS.WritableStream`, so `stdout.columns`,
-`stdout.rows`, `stdout.isTTY` and `stdout.on('resize', …)` do not type-check.
-Use `useWindowSize()` for dimensions and resize.
+`stdout.rows` and `stdout.isTTY` do not type-check. (`stdout.on('resize', …)`
+still compiles, but only a TTY stream emits `resize`.) Use `useWindowSize()` for
+dimensions and resize — it re-renders on resize and handles non-TTY output.
 
 ```tsx
 import React, {useEffect} from 'react';

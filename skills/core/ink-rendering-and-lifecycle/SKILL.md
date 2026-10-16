@@ -23,6 +23,12 @@ Exit paths: **Ctrl+C** (enabled by default via `exitOnCtrlC`), calling
 `exit()` from `useApp()` inside a component, or calling `unmount()` on the
 `Instance` `render()` returns.
 
+To run an interactive child that needs the terminal itself (`$EDITOR`, `less`,
+`fzf`) without exiting, `useApp()` also returns `suspendTerminal(callback)`: it
+hands the terminal over for the callback's duration, then restores Ink's
+terminal state and forces a full redraw (see `ink-async-and-suspense` for the
+spawn recipe).
+
 ```tsx
 import React from 'react';
 import {render, Text} from 'ink';
