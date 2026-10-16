@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 import { extractUnits, normalize, findAll, factTokens } from './units.mjs';
 import { registerFixture, checkFixture } from './tsc-batch.mjs';
 import { allHarnessCleanups } from './harness.mjs';
+import { runFence } from './fence-run.mjs';
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const SKILLS_DIR = join(ROOT, 'skills');
@@ -145,7 +146,7 @@ const asQuotes = (quotes) => quotes.map((q) => (typeof q === 'string' ? { q } : 
 // assertions that count themselves
 // ---------------------------------------------------------------------------
 
-function countingAssert(ctx) {
+export function countingAssert(ctx) {
   let count = 0;
   const wrap = (fn) => (...args) => {
     count++;
@@ -173,19 +174,36 @@ function countingAssert(ctx) {
 }
 
 /** The `q` handed to a fact test: reading a token proves the expected value came from the text. */
-function makeQ(claim, mutate) {
+export function makeQ(claim, mutate) {
   const tokens = [...new Set(claim.quotes.flatMap(({ q }) => factTokens(q)))];
   const read = new Set(claim.ctx);
+
+  const tok = (text) => {
+    if (!tokens.includes(text)) {
+      throw new Error(`q.tok("${text}"): not a fact token of this claim's quotes (${tokens.map((x) => `"${x}"`).join(', ') || 'none'})`);
+    }
+    read.add(text);
+    return mutate ? mutate(text) : text;
+  };
+  const resolve = (scope, name) => {
+    if (!(name in Object(scope)) || scope[name] === undefined) throw new Error(`"${name}" is not an export of the module it was looked up in`);
+    return scope[name];
+  };
+
   return {
     tokens,
-    tok(text) {
-      if (!tokens.includes(text)) {
-        throw new Error(`q.tok("${text}"): not a fact token of this claim's quotes (${tokens.map((x) => `"${x}"`).join(', ') || 'none'})`);
-      }
-      read.add(text);
-      return mutate ? mutate(text) : text;
-    },
+    tok,
+    /**
+     * Bind a token that names an API (`useBoxMetrics`, `measureElement(ref.current)`, `Box`): read
+     * it and look it up in `scope`. A token that is not an export of `scope` throws, so changing
+     * the name in the text fails the claim.
+     */
+    api: (scope, text) => resolve(scope, tok(text).replace(/\(.*$/s, '').trim()),
+    /** Bind a component token (`<Box>`, `<Rule />`): read it and look the component up in `scope`. */
+    el: (scope, text) => resolve(scope, tok(text).replace(/[<>/\s]/g, '')),
     unread: () => tokens.filter((tk) => !read.has(tk)),
+    /** Tokens read with q.tok() (not the ctx ones). */
+    readTokens: () => tokens.filter((tk) => read.has(tk) && !claim.ctx.includes(tk)),
   };
 }
 
@@ -286,6 +304,18 @@ export function skill(name) {
         }
       });
       return claim;
+    },
+
+    /** The nth fence of a skill file ({lang, info, code}). */
+    fenceOf(file, nth) {
+      const fence = loadFile(name, file).fences[nth];
+      if (!fence) throw new Error(`${name}/${file} has no fence #${nth}`);
+      return fence;
+    },
+
+    /** Run the nth fence as written (see fence-run.mjs). */
+    runFence(file, nth, opts) {
+      return runFence(this.fenceOf(file, nth), opts);
     },
 
     /** No assertion — a recommendation or pointer. Must say why, and may not hide fact tokens. */

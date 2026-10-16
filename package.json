@@ -45,7 +45,8 @@
     "smoke": "node scripts/smoke-imports.mjs",
     "test": "node tests/run.mjs",
     "test:setup": "npm ci --prefix tests/external",
-    "test:coverage": "node tests/coverage.mjs"
+    "test:coverage": "node tests/coverage.mjs",
+    "test:mutate": "node tests/mutate.mjs"
   },
   "devDependencies": {
     "@alcalzone/ink-table": "^1.1.1",

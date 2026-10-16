@@ -9,3 +9,5 @@ tests/.tmp/
 tests/external/node_modules/
 tests/external/.snippets/
 tests/external/.tsc/
+tests/.fences/
+tests/external/.fences/

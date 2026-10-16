@@ -10,13 +10,17 @@ that anchors it and forces re-verification.
 npm run test:setup      # once: installs the pinned external project (network)
 npm test                # every claim + the harness self-tests (normalised environment)
 npm run test:coverage   # the gate: every unit of every skill is covered by a passing claim
-node tests/run.mjs ink-layout   # one claims file
+npm run test:mutate     # the audit: changing a bound token in the text must fail its claim
+node tests/run.mjs ink-layout   # claims files whose name contains "ink-layout"
+node tests/mutate.mjs ink-layout   # audit only the claims whose id contains it
 ```
 
 ## Writing claims — `tests/claims/<skill>.test.mjs`
 
-One file per skill (its `references/*.md` included). Import from `../lib/index.mjs`; never import
-`node:test` (collect mode must not run tests).
+One file per markdown file: `<skill>.test.mjs` for `SKILL.md` and `<skill>.<reference>.test.mjs` for
+each `references/<reference>.md` (ids are `skill/file#NNN`, numbered per markdown file). Shared
+fixtures go in `<skill>.helpers.mjs`. Import from `../lib/index.mjs`; never import `node:test`
+(collect mode must not run tests).
 
 ```js
 import { skill, tsx, ink, h, keys, mount } from '../lib/index.mjs';
@@ -51,6 +55,22 @@ the file (or `{q, nth}`), at least three words or a fact token. A quote may span
 must each be named by a covering *fact* claim and *read* by it with `q.tok('…')` (or listed in `ctx`
 as context). A test with no assertion fails; an unread token fails.
 
+**Reading is not enough — bind the token.** `npm run test:mutate` changes each token a claim reads
+(a digit up, a letter replaced, a suffix) and requires the claim to fail; a token that survives is
+bound to nothing. Bind it by using the returned value where the assertion depends on it:
+
+```js
+const Gradient = q.api(mod, 'Gradient');            // a named export: a changed name throws
+const Box = q.el(ink, '<Box>');                     // a <Component> token
+const range = q.tok('ink ^5.1.0').split(' ')[1];    // a value: compare it with the real data
+const props = { [q.tok('flexGrow')]: 1 };           // a prop name: a changed name changes the output
+t.equal(Number(q.tok('31')), columns);              // a number
+```
+
+For a *negative* claim ("X is ignored") bind the token to a positive control first (X is a
+recognised option, here is where it is defined), or the mutated name passes just as well. Tokens that
+are only context (an illustrative HTML snippet, an emphasis word) go in `ctx`, not in a fake read.
+
 ### Rules that keep the tests honest
 
 1. **The test decides, the text follows.** If a claim is false, fix the skill; never weaken a test
@@ -65,7 +85,9 @@ as context). A test with no assertion fails; an unread token fails.
    *about* ink-testing-library (it forces `debug: true`, 100 columns, no rows/isTTY).
 5. **Import-time or process state** (`CI`, chalk level, supports-hyperlinks, `LINES`, exit codes,
    `SIGINT`): `runIsolated({probe, env, tty, path})` with a probe in `tests/probes/` that prints one
-   JSON line. The suite itself runs with `CI` *absent*, `FORCE_COLOR=3`, `COLORTERM=truecolor`
+   JSON line (a probe for an external package lives in `tests/external/probes/` and is run with
+   `project: 'external'`). To feed stdin, print a line `READY` once mounted and pass
+   `stdin: [[delayMs, data], …]`; the delays count from that line, not from spawn. The suite itself runs with `CI` *absent*, `FORCE_COLOR=3`, `COLORTERM=truecolor`
    (see `tests/run.mjs`); `is-in-ci` treats even `CI=''` as CI.
 6. **Third-party packages not in the root project** live in `tests/external/` (own lockfile,
    `legacy-peer-deps`). Mount their components with `await externalHarness()` — never the root
@@ -76,6 +98,18 @@ as context). A test with no assertion fails; an unread token fails.
 8. **Fences** are compiled, not just quoted: tsx/jsx fences importing packages only in
    `tests/external` are routed there automatically; `tests/fence-stubs.json` supplies placeholder
    modules such as `./app.js`. Every comment line inside a fence is a unit too.
+9. **Run the fence itself, not a copy.** `s.runFence(file, nth, {stubs?, mountOptions?})` transpiles
+   the fence as written, points its `from 'ink'` at a shim whose `render()` goes to the recording
+   harness, and returns `{mod, apps}`: `mod` has every top-level declaration (exported or not), `apps`
+   the mounts its `render(...)` calls made. A fence that imports an external-only package is
+   mounted by the external project's Ink automatically. Use `stubs` for placeholder imports; a
+   test that retypes the fence's code proves nothing about the text.
+10. **Registry and package facts** (a name is not on npm, who maintains it, what it depends on) are
+    read from `data/ecosystem.json` by `loadEcosystem()`; they are refreshed by the weekly fetch,
+    never typed into a test. Peer ranges and versions of *installed* packages come from `extPkg()` /
+    `pkg()` and are compared with `semver`.
+11. **No network.** Tests that need an HTTP server start one on `127.0.0.1` (see `serve()` in
+    `ink-decoration.helpers.mjs`); installing the external project is the only network use.
 
 ## What the gate counts (`tests/coverage.mjs`)
 

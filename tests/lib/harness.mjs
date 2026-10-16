@@ -304,10 +304,15 @@ export const { h, mount, cleanupMounts, catchRenderError } = rootHarness;
  * scratch (Ink reads `is-in-ci` and chalk reads the environment once, at import).
  * The probe prints one JSON line, parsed into `json`.
  *
- * @param {{probe:string, env?:object, tty?:{isTTY?:boolean, columns?:number, rows?:number, stdin?:boolean}, path?:'empty'|'inherit', args?:string[], timeout?:number, signal?:string, killAfter?:number}} opts
+ * `project: 'external'` runs tests/external/probes/<probe>.mjs, so its imports resolve against that project's
+ * node_modules. `stdin` is a list of [delayMs, data] pairs written to the child's stdin, counted
+ * from the line `READY` the probe prints once it has mounted.
+ *
+ * @param {{probe:string, project?:'root'|'external', stdin?:[number,string][], env?:object, tty?:{isTTY?:boolean, columns?:number, rows?:number, stdin?:boolean}, path?:'empty'|'inherit', args?:string[], timeout?:number, signal?:string, killAfter?:number}} opts
  */
-export function runIsolated({ probe, env = {}, tty = {}, path = 'empty', args = [], timeout = 15_000, signal, killAfter = 400 }) {
-  const probeFile = join(ROOT, 'tests', 'probes', `${probe}.mjs`);
+export function runIsolated({ probe, project = 'root', env = {}, tty = {}, path = 'empty', args = [], timeout = 15_000, signal, killAfter = 400, stdin: stdinChunks = [] }) {
+  const base = project === 'external' ? join(ROOT, 'tests', 'external') : join(ROOT, 'tests');
+  const probeFile = join(base, 'probes', `${probe}.mjs`);
   if (!existsSync(probeFile)) throw new Error(`no probe: ${probe}`);
   const childEnv = {
     PATH: path === 'empty' ? '' : process.env.PATH ?? '',
@@ -318,13 +323,25 @@ export function runIsolated({ probe, env = {}, tty = {}, path = 'empty', args = 
   };
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, ['--import', join(HERE, 'fake-tty.mjs'), probeFile, ...args], {
-      cwd: ROOT,
+      cwd: base === join(ROOT, 'tests') ? ROOT : base,
       env: childEnv,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
+    // stdin chunks are timed from the moment the child prints a line "READY" (it has mounted),
+    // or from spawn when it never does -- Node's start-up time varies too much to count from spawn
+    let chunksScheduled = false;
+    const scheduleChunks = () => {
+      if (chunksScheduled) return;
+      chunksScheduled = true;
+      for (const [delay, data] of stdinChunks) setTimeout(() => child.stdin.writable && child.stdin.write(data), delay);
+    };
+    if (!stdinChunks.length) chunksScheduled = true;
     let stdout = '';
     let stderr = '';
-    child.stdout.on('data', (d) => (stdout += d));
+    child.stdout.on('data', (d) => {
+      stdout += d;
+      if (stdout.includes('READY\n')) scheduleChunks();
+    });
     child.stderr.on('data', (d) => (stderr += d));
     const timer = setTimeout(() => {
       child.kill('SIGKILL');

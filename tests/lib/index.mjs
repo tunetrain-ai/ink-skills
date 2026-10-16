@@ -8,4 +8,5 @@ export {
   EXT, externalInstalled, requireExternal, extPkg, extPackageDir, extReadFile, resolveEntry, extImport,
   externalHarness, runExternal,
 } from './external.mjs';
+export { runFence, projectOf, importedPackages } from './fence-run.mjs';
 export { loadEcosystem } from '../../scripts/lib/ecosystem.mjs';
