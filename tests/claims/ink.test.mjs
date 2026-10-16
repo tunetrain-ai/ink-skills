@@ -126,7 +126,7 @@ s.fact(F, ['Only load a second skill when the task genuinely spans two concerns 
   t.notEqual(focus, animation);
 });
 
-s.fact(F, ['**Don\'t route for plain React/JavaScript questions** that happen to occur inside an Ink project (e.g. "how do I use `useReducer`?") — those aren\'t Ink-specific, answer directly.'], { kind: 'R', ctx: ["Don't route for plain React/JavaScript questions", 'how do I use  ?'] }, async (t, q) => {
+s.fact(F, ['**Don\'t route for plain React/JavaScript questions** that happen to occur inside an Ink project (e.g. a question about `useReducer`) — those aren\'t Ink-specific, answer directly.'], { kind: 'R', ctx: ["Don't route for plain React/JavaScript questions"] }, async (t, q) => {
   const hook = q.tok('useReducer');
   t.equal(typeof React[hook], 'function', 'useReducer is a React hook');
   t.ok(!(hook in ink), 'which Ink does not provide: it is not Ink-specific');

@@ -25,7 +25,7 @@ answer and defer to it.
   second skill when the task genuinely spans two concerns (e.g. a focusable, animated
   list touches both `ink-focus-management` and `ink-animation-and-performance`).
 - **Don't route for plain React/JavaScript questions** that happen to occur inside an Ink
-  project (e.g. "how do I use `useReducer`?") — those aren't Ink-specific, answer directly.
+  project (e.g. a question about `useReducer`) — those aren't Ink-specific, answer directly.
 - **New project?** Start at `ink-getting-started` regardless of the specific question —
   it covers the scaffold, TypeScript/ESM setup, and `package.json` `bin` wiring.
 - **Recommending a third-party component?** Always load `ink-ecosystem-overview` first

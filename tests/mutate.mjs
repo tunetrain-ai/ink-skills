@@ -53,14 +53,28 @@ function mutations(token) {
 
 const withTimeout = (promise, ms) => Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error(`timed out after ${ms} ms`)), ms))]);
 
+// A stray exception thrown outside the claim's own promise chain (a pipe into a fake stream, a
+// timer) would end the whole audit. Attribute it to the claim that is running and carry on.
+let uncaught = null;
+let inFlight = null;
+process.on('uncaughtException', (error) => {
+  uncaught = error;
+  console.log(`  ! uncaught while running ${inFlight}: ${String(error?.message ?? error).split('\n')[0]}`);
+});
+
 async function run(claim, mutate) {
   const t = countingAssert(null);
   const q = makeQ(claim, mutate);
+  inFlight = claim.id;
+  uncaught = null;
   try {
     await withTimeout(claim.fn(t, q), claim.timeout ?? 20_000);
+    // give a late stray exception its chance to surface before the claim counts as passed
+    await new Promise((resolve) => setTimeout(resolve, 20));
   } finally {
     for (const cleanup of allHarnessCleanups) await cleanup();
   }
+  if (uncaught) throw uncaught;
   if (t.count === 0) throw new Error('no assertions');
   return q;
 }
