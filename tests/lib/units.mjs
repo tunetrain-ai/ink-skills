@@ -32,12 +32,13 @@ export function findAll(haystack, needle) {
  */
 export function factTokens(text) {
   const tokens = new Set();
+  const outsideCode = text.replace(/`+[^`]*`+/g, ' ');
   for (const m of text.matchAll(/`+([^`]+)`+/g)) tokens.add(m[1].trim());
   for (const m of text.matchAll(/\*\*([^*]+)\*\*/g)) tokens.add(m[1].trim());
-  for (const m of text.matchAll(/["“]([^"”]{1,60})["”]/g)) tokens.add(m[1].trim());
+  // quoted strings only OUTSIDE code spans: `flexDirection="column"` is one token, not three
+  for (const m of outsideCode.matchAll(/["“]([^"”]{1,60})["”]/g)) tokens.add(m[1].trim());
   // numbers outside inline code: 80, 100, 8.0.0, 80×24, 0–100, 50%
-  const outsideCode = text.replace(/`+[^`]*`+/g, ' ');
-  for (const m of outsideCode.matchAll(/(?<![\w.])\d+(?:[.,]\d+)*(?:\s?[×x–-]\s?\d+(?:\.\d+)*)?%?(?![\w])/g)) tokens.add(m[0].trim());
+  for (const m of outsideCode.matchAll(/(?<![\w.#])\d+(?:[.,]\d+)*(?:\s?[×x–-]\s?\d+(?:\.\d+)*)?%?(?![\w])/g)) tokens.add(m[0].trim());
   tokens.delete('');
   return [...tokens];
 }
@@ -81,17 +82,24 @@ export function sentenceRanges(text) {
 // comment extraction from code fences
 // ---------------------------------------------------------------------------
 
-/** Comment texts inside a code body (// ..., # ... for sh, /* ... *\/ and * lines). */
-export function fenceComments(lang, code) {
+/**
+ * Comments inside a code body (// ..., # ... for sh, /* ... *\/ and * lines), each with the raw
+ * source it came from (marker included) so it can be located unambiguously.
+ * @returns {{text: string, raw: string}[]}
+ */
+export function fenceCommentSpans(lang, code) {
   const out = [];
+  const add = (text, raw) => {
+    if (text) out.push({ text, raw: raw.trim() });
+  };
   for (const line of code.split('\n')) {
     if (/^\s*(\/\*|\*)/.test(line)) {
-      out.push(line.replace(/^\s*(\/\*+|\*+\/?)\s?/, '').replace(/\*\/\s*$/, '').trim());
+      add(line.replace(/^\s*(\/\*+|\*+\/?)\s?/, '').replace(/\*\/\s*$/, '').trim(), line);
       continue;
     }
     if (lang === 'sh' || lang === 'bash') {
       const m = line.match(/(?:^|\s)#\s?(.*)$/);
-      if (m) out.push(m[1].trim());
+      if (m) add(m[1].trim(), line.slice(line.length - m[0].length));
       continue;
     }
     // scan for // outside of quotes
@@ -103,17 +111,20 @@ export function fenceComments(lang, code) {
         else if (c === quote) quote = null;
       } else if (c === '"' || c === "'" || c === '`') quote = c;
       else if (c === '/' && line[i + 1] === '/' && (i === 0 || /\s|[;,)}]/.test(line[i - 1]))) {
-        out.push(line.slice(i + 2).trim());
+        add(line.slice(i + 2).trim(), line.slice(i));
         break;
       } else if (c === '/' && line[i + 1] === '*') {
         const end = line.indexOf('*/', i + 2);
-        out.push(line.slice(i + 2, end === -1 ? undefined : end).trim());
+        add(line.slice(i + 2, end === -1 ? undefined : end).trim(), line.slice(i, end === -1 ? undefined : end + 2));
         break;
       }
     }
   }
-  return out.filter(Boolean);
+  return out;
 }
+
+/** Comment texts inside a code body. */
+export const fenceComments = (lang, code) => fenceCommentSpans(lang, code).map((c) => c.text);
 
 // ---------------------------------------------------------------------------
 // unit extraction
@@ -269,9 +280,16 @@ export function extractUnits(rawFile) {
           const unit = push('fence', code || '(empty)', line, { fence: index, lang, info });
           if (unit) {
             fences.push({ lang, info, code, unit });
-            for (const comment of fenceComments(lang, code)) {
-              const loc = locate(comment, unit.start);
+            // comments come in source order: search each one from the end of the previous one,
+            // starting at its marker, so a one-letter comment cannot bind to an earlier letter
+            let commentCursor = unit.start;
+            for (const { text: comment, raw } of fenceCommentSpans(lang, code)) {
+              const rawN = normalize(raw);
+              const at = N.indexOf(rawN, commentCursor);
+              const inner = rawN.indexOf(normalize(comment));
+              const loc = at === -1 || inner === -1 ? null : [at + inner, at + inner + normalize(comment).length];
               if (loc && loc[0] >= unit.start && loc[1] <= unit.end) {
+                commentCursor = loc[1];
                 units.push({
                   id: nextId('comment'),
                   kind: 'comment',

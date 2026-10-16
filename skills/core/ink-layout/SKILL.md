@@ -8,11 +8,12 @@ metadata:
 
 # Layout with `<Box>`
 
-`<Box>` is Ink's only layout primitive. Every `<Box>` is a Yoga flexbox
-container — think `<div style="display: flex">`, always, with no other
-display mode. There is no CSS Grid, no absolute-by-default positioning, and
-no implicit block layout. `<Box>` renders nothing itself; only `<Text>`
-renders characters.
+`<Box>` is Ink's layout component: layout props exist on `<Box>`, not on
+`<Text>`. Every `<Box>` is a Yoga flexbox container — think
+`<div style="display: flex">`; its `display` can be `flex` or `none`, nothing
+else. There is no CSS Grid, no absolute-by-default positioning, and no
+implicit block layout. Without a border or background a `<Box>` renders
+nothing itself; characters come from `<Text>`.
 
 ```tsx
 import React from 'react';
@@ -34,8 +35,7 @@ mental model and the handful of things that trip people up.
 ## The flex default is `row`, not `column`
 
 Unlike a browser `<div>`, `<Box>`'s default `flexDirection` is `row` — children
-lay out left-to-right unless you set `flexDirection="column"`. This is the #1
-source of "why is my vertical list rendering as one line" bugs.
+lay out left-to-right unless you set `flexDirection="column"`.
 
 ```tsx
 import React from 'react';
@@ -68,7 +68,7 @@ shorter and doesn't need a special case for the last item.
 
 ## Centering and spacing content
 
-Three tools cover almost every layout request:
+Three tools cover common layouts:
 
 ```tsx
 import React from 'react';
@@ -114,7 +114,7 @@ const StatusLine = () => (
 ## Measuring a box at runtime
 
 `measureElement(ref.current)` and the `useBoxMetrics(ref)` hook both return a
-box's resolved layout, and both return zeros until the first layout pass:
+box's resolved layout:
 
 - `measureElement` → `{x, y, width, height, clientWidth, clientHeight}`
 - `useBoxMetrics` → `{width, height, left, top, clientWidth, clientHeight, hasMeasured}`
@@ -122,10 +122,11 @@ box's resolved layout, and both return zeros until the first layout pass:
 Two differences:
 
 - `useBoxMetrics` is a hook that **re-renders your component** when layout
-  changes (resize, content changes); `measureElement` is an **imperative,
-  point-in-time read** you call from `useEffect`/`useLayoutEffect`, an input
-  handler, or a timer — never during render, where it returns all zeros
-  because layout hasn't run yet.
+  changes (resize, content changes); on the first render, before the first
+  layout pass, it returns zeros with `hasMeasured` set to `false`.
+  `measureElement` is an **imperative, point-in-time read** of the layout as it
+  is now — call it from `useEffect`/`useLayoutEffect`, an input handler, or a
+  timer, once the element has mounted.
 - `measureElement` takes a non-null `DOMElement`, so guard `ref.current`
   before calling it (a ref is `null` until the element mounts).
 
@@ -165,8 +166,9 @@ render(<Example />);
 
 `<Box>` has `contentOffsetX`/`contentOffsetY` (cells, default `0`) that shift
 its children left/up. Put the content in a fixed-size `overflow="hidden"`
-viewport and set `contentOffsetY={scrollTop}`; clamp `scrollTop` to
-`content.height - viewport.clientHeight`, both measured with `useBoxMetrics`.
+viewport with `flexDirection="column"` and set `contentOffsetY={scrollTop}`;
+clamp `scrollTop` to `content.height - viewport.clientHeight`, both measured
+with `useBoxMetrics`.
 See `references/scrollable-view.md` for a full component.
 
 Everything inside a `contentOffset` viewport is still laid out, so for very

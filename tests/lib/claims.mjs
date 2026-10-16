@@ -102,15 +102,15 @@ export function allSkillFiles() {
 // ---------------------------------------------------------------------------
 
 /** Resolve a claim's quotes to ranges in the file's normalized text. */
-export function anchor(skillName, file, quotes) {
+export function anchor(skillName, file, quotes, { minWords = 3 } = {}) {
   const { N } = loadFile(skillName, file);
   const problems = [];
   const ranges = [];
   for (const { q, nth } of quotes) {
     const needle = normalize(q);
     const words = needle.split(' ').filter(Boolean).length;
-    if (words < 3 && factTokens(needle).length === 0 && !/`/.test(needle)) {
-      problems.push(`quote too short to anchor anything (need ≥3 words or a fact token): "${q}"`);
+    if (words < minWords && factTokens(needle).length === 0 && !/`/.test(needle)) {
+      problems.push(`quote too short to anchor anything (need ≥${minWords} words or a fact token): "${q}"`);
     }
     const hits = findAll(N, needle);
     if (hits.length === 0) {
@@ -193,17 +193,25 @@ function makeQ(claim, mutate) {
 // public API
 // ---------------------------------------------------------------------------
 
-let counter = 0;
+// ids count per markdown file, so they are the same whether every claims file runs in its own
+// process (npm test) or all are imported into one (collect mode, the gate)
+const counters = new Map();
+const nextId = (name, file) => {
+  const key = `${name}/${file.replace(/\.md$/, '')}`;
+  const n = (counters.get(key) ?? 0) + 1;
+  counters.set(key, n);
+  return `${key}#${String(n).padStart(3, '0')}`;
+};
 
 export function skill(name) {
   if (!findSkillDir(name)) throw new Error(`skill("${name}"): no such skill`);
 
   function base(type, kind, file, quotes, extra = {}) {
     const q = asQuotes(quotes);
-    const { problems } = anchor(name, file, q);
+    const { problems } = anchor(name, file, q, { minWords: type === 'guidance' ? 2 : 3 });
     /** @type {Claim} */
     const claim = {
-      id: `${name}/${file.replace(/\.md$/, '')}#${String(++counter).padStart(3, '0')}`,
+      id: nextId(name, file),
       skill: name,
       file,
       type,

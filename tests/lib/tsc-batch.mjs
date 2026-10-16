@@ -32,10 +32,13 @@ export function expectedDiagnostics(source) {
 
 export function registerFixture(skill, claimId, source, opts = {}) {
   const project = opts.project ?? 'root';
-  const key = `${project}:${skill}`;
+  // One directory per claims FILE (node --test runs each file in its own process): two files for
+  // the same skill (SKILL.md and a reference) must not delete each other's fixtures.
+  const owner = (process.argv[1] ?? skill).split('/').pop().replace(/\.(test\.)?mjs$/, '');
+  const key = `${project}:${owner}`;
   if (!batches.has(key)) {
     const base = project === 'external' ? join(ROOT, 'tests', 'external', '.tsc') : join(ROOT, 'tests', '.tsc');
-    batches.set(key, { skill, project, dir: join(base, skill), handles: [] });
+    batches.set(key, { skill, project, dir: join(base, owner), handles: [] });
   }
   const batch = batches.get(key);
   const handle = { claimId, source, file: `f${String(batch.handles.length).padStart(3, '0')}.tsx`, batch, diagnostics: null };
