@@ -9,7 +9,7 @@
 // a token that survives every change is bound to nothing and is reported.
 //
 //   node tests/mutate.mjs [claim id substring ...] [--verbose] [--claims-dir=<dir>]
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -18,12 +18,16 @@ import { testEnv } from './lib/test-env.mjs';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 if (process.env.CLAIMS_MUTATE_CHILD !== '1') {
-  const res = spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...process.argv.slice(2)], {
+  // stdin is a pipe that stays open, like a terminal's: ink-spawn (exercised by some claims) throws
+  // `dest.end is not a function` when stdin is a file or /dev/null, which is what a CI step or a
+  // background job provides
+  const child = spawn(process.execPath, [fileURLToPath(import.meta.url), ...process.argv.slice(2)], {
     cwd: ROOT,
     env: testEnv({ CLAIMS_MUTATE_CHILD: '1', CLAIMS_COLLECT: '1' }),
-    stdio: 'inherit',
+    stdio: ['pipe', 'inherit', 'inherit'],
   });
-  process.exit(res.status ?? 1);
+  child.on('exit', (status) => process.exit(status ?? 1));
+  await new Promise(() => {});
 }
 
 const verbose = process.argv.includes('--verbose');
