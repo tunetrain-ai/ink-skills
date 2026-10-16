@@ -12,17 +12,16 @@ Requires Node >=22 and react >=19.3.0 (plus @types/react >=19.3.0 when using Typ
 
 ## Scaffold a new project
 
-The fastest path is [`create-ink-app`](https://github.com/vadimdemedes/create-ink-app),
-which sets up ESM, a `bin` entry, and a sample app in one step (plain JavaScript +
-Babel by default):
+[`create-ink-app`](https://github.com/vadimdemedes/create-ink-app) sets up ESM, a
+`bin` entry, and a sample app (plain JavaScript + Babel by default):
 
 ```sh
 npx create-ink-app my-ink-cli
-# or, explicitly TypeScript (recommended)
+# or the TypeScript template
 npx create-ink-app --typescript my-ink-cli
 ```
 
-`create-ink-app` (latest `3.0.2`) still scaffolds Ink 4 / React 18 — its templates pin
+`create-ink-app` 3.0.2 still scaffolds Ink 4 / React 18 — its templates pin
 `ink ^4.1.0`, `react ^18.2.0`, `ink-testing-library ^3.0.0` and `"node": ">=16"`. After
 scaffolding, upgrade and raise the Node floor:
 
@@ -35,9 +34,9 @@ Then set `"engines": {"node": ">=22"}` in `package.json`.
 
 ## Minimal hand-written setup
 
-Ink components are ordinary React. With a TypeScript + ESM toolchain (`tsx`, `esbuild`,
-or `tsc` compiled ahead of time) no Babel config is needed — `tsconfig.json` just needs
-`"jsx": "react-jsx"`.
+Ink components are ordinary React. With a TypeScript + ESM toolchain (`tsc` compiled
+ahead of time) no Babel config is needed — `tsc` compiles JSX itself when `tsconfig.json`
+sets `"jsx": "react-jsx"`.
 
 ```tsx
 #!/usr/bin/env node
@@ -49,25 +48,23 @@ const Demo = () => <Text>Hello World</Text>;
 render(<Demo />);
 ```
 
-Run it directly with a TS-aware runtime (`npx tsx source.tsx`) during development, or
-compile ahead of time for distribution.
+Compile it with `tsc`, then run the output with `node` (`node dist/cli.js`).
 
 <details>
-<summary>Manual JavaScript + Babel setup (no TypeScript)</summary>
+<summary>JavaScript + Babel setup (no TypeScript)</summary>
 
-```sh
-npm install --save-dev @babel/cli @babel/core @babel/preset-react
-```
+The JavaScript template of `create-ink-app` builds with `@babel/cli` and
+`@babel/preset-react`, configured in `package.json`:
 
 ```json
-{"presets": ["@babel/preset-react"]}
-```
-
-Save as `babel.config.json`, then transpile and run:
-
-```sh
-npx babel source.js -o cli.js
-node cli.js
+{
+	"scripts": {
+		"build": "babel --out-dir=dist source"
+	},
+	"babel": {
+		"presets": ["@babel/preset-react"]
+	}
+}
 ```
 
 </details>
@@ -75,8 +72,7 @@ node cli.js
 ## Wiring up a CLI binary
 
 For a publishable CLI, point `package.json`'s `bin` field at the compiled entry and keep
-the shebang line as the very first line of the **compiled** output (some bundlers strip
-it — verify after building):
+the shebang line as the very first line of the **compiled** output (`tsc` keeps it):
 
 ```json
 {
@@ -88,21 +84,21 @@ it — verify after building):
 
 ## The process model
 
-An Ink app is a plain Node.js process — it only stays alive while there's active work in
-the event loop (timers, pending promises, `useInput` listening on stdin). **A component
-tree with no async work renders once and exits immediately.** This trips people up
-constantly: if your CLI prints its UI and then quits before you can interact with it,
-you're missing something that keeps the event loop alive — typically `useInput` (see
-`ink-input-handling`) or an unresolved promise.
+An Ink app stays alive only while there's active work in the event loop — timers, open
+handles such as sockets or child processes, or `useInput` listening on stdin; a pending
+promise on its own does not keep it alive. **A component tree with no async work renders
+once and exits immediately.** If your CLI prints its UI and then quits before you can
+interact with it, nothing is keeping the event loop alive — add what the app is waiting
+for, for example `useInput` (see `ink-input-handling`).
 
 See `ink-rendering-and-lifecycle` for `render()`'s full option set, `waitUntilExit()`, and
 how to exit deliberately instead of relying on the process just running out of work.
 
 ## Flexbox mental model
 
-Every Ink element is a Yoga flexbox container — think of every `<Box>` as a browser
-`<div>` with `display: flex` already applied. There is no non-flex layout mode. All text
-must be wrapped in `<Text>`; a raw string as a direct child of `<Box>` throws
+Layout is flexbox, computed by Yoga — think of every `<Box>` as a browser `<div>` with
+`display: flex` already applied. There is no non-flex layout mode. All text must be
+wrapped in `<Text>`; a raw string as a direct child of `<Box>` throws
 (`Text string "…" must be rendered inside <Text> component`). See `ink-layout` for the full
 flexbox API.
 

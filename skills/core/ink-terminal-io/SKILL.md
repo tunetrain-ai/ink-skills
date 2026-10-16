@@ -18,8 +18,9 @@ writes a plain string **without tearing Ink's managed output** — similar to
 
 `stdout`/`stderr` are typed `NodeJS.WritableStream`, so `stdout.columns`,
 `stdout.rows` and `stdout.isTTY` do not type-check. (`stdout.on('resize', …)`
-still compiles, but only a TTY stream emits `resize`.) Use `useWindowSize()` for
-dimensions and resize — it re-renders on resize and handles non-TTY output.
+still compiles, and a TTY stream emits `resize` when its window size changes.)
+Use `useWindowSize()` for dimensions and resize — it re-renders on resize and
+returns a size even for non-TTY output.
 
 ```tsx
 import React, {useEffect} from 'react';
@@ -44,16 +45,15 @@ output by default via `patchConsole`, see `ink-rendering-and-lifecycle`).
 ## `useStdin()`
 
 Returns `{stdin, isRawModeSupported, setRawMode}`. Reach for this instead of
-`useInput` only when you need the raw stream itself (e.g. piping it
-somewhere) — for reading keypresses, `useInput`/`usePaste` (see
-`ink-input-handling`) are almost always the better fit and already manage raw
-mode for you.
+`useInput` when you need the raw stream itself (e.g. piping it somewhere) —
+`useInput`/`usePaste` (see `ink-input-handling`) read keypresses and already
+manage raw mode for you.
 
-`stdin` is typed `NodeJS.ReadableStream`: use `isRawModeSupported` (true only
-when stdin is a TTY with `setRawMode`), not `stdin.isTTY`. `useInput` drops
-unrecognized control sequences (mouse reports, focus in/out, cursor-position
-reports), and keypad Enter arrives as `key.return`; if you need those raw
-sequences, read `stdin` directly.
+`stdin` is typed `NodeJS.ReadableStream`, so `stdin.isTTY` does not type-check:
+use `isRawModeSupported` (true only when stdin is a TTY with `setRawMode`)
+instead. `useInput` drops unrecognized control sequences (mouse reports, focus
+in/out, cursor-position reports), and keypad Enter arrives as `key.return`; if
+you need those raw sequences, read `stdin` directly.
 
 ```tsx
 import React, {useEffect} from 'react';
@@ -73,18 +73,19 @@ const Example = () => {
 ```
 
 **Always check `isRawModeSupported` before calling `setRawMode`** — it
-throws when the current stdin doesn't support raw mode (piped input, some CI
-runners). Use Ink's `setRawMode`, never `process.stdin.setRawMode` directly —
+throws when the current stdin doesn't support raw mode (for example piped
+input). Use Ink's `setRawMode`, never `process.stdin.setRawMode` directly —
 Ink needs to intercept Ctrl+C itself when raw mode is on.
 
 ## `useWindowSize()`
 
-Returns `{columns, rows}` and re-renders your component on terminal resize
-(when the stream reports no size, e.g. piped output, it falls back to the
-`COLUMNS`/`LINES` environment variables, then to 80×24) —
-the hook to reach for whenever layout needs to react to the terminal size
-(see `ink-fullscreen-layouts` for full-screen/responsive layouts built on
-top of it).
+Returns `{columns, rows}` and re-renders your component on terminal resize.
+When the stream reports no size (e.g. piped output) it falls back to the size
+of `process.stderr`, then to the `COLUMNS` and `LINES` environment variables
+(both must be set), then to the controlling terminal, and finally to 80×24.
+Use it whenever layout needs to react to the terminal size (see
+`ink-fullscreen-layouts` for full-screen/responsive layouts built on top of
+it).
 
 ```tsx
 import React from 'react';
@@ -101,16 +102,16 @@ const Example = () => {
 };
 ```
 
-Note: when a terminal is resized narrower, some emulators briefly show ghost
-lines depending on their own reflow behavior — not an Ink bug.
+Note: when the terminal is resized narrower, Ink erases its previous frame and
+redraws it at the new width.
 
 ## `useCursor()`
 
 Returns `{setCursorPosition}` — controls where the terminal cursor sits
-after each render. Mainly needed for **IME (Input Method Editor) support**,
-so the composing character appears at the right spot for CJK/emoji input;
-most apps that don't build a custom text input never need this (`@inkjs/ui`'s
-`TextInput` — see `inkjs-ui-inputs` — handles it internally).
+after each render; Ink keeps the cursor hidden unless a position is set.
+Use it in a custom text input that needs the real cursor at its caret, for
+example for **IME (Input Method Editor)** support; none of `@inkjs/ui`'s
+components call it (see `inkjs-ui-inputs`).
 
 ```tsx
 import React, {useState} from 'react';
