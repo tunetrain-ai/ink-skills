@@ -9,10 +9,9 @@ metadata:
 # Markdown and code rendering
 
 Ink passes ANSI escape sequences inside a string through `<Text>` intact and
-measures them correctly, so the most reliable approach is to turn Markdown or
-source code into an **ANSI string** with a plain library and render that. These
-libraries have no Ink peer range to go stale, unlike the wrapper packages
-below.
+measures them correctly, so Markdown or source code can be turned into an
+**ANSI string** by a plain library and rendered with `<Text>`. These libraries
+declare no Ink peer range, unlike the wrapper packages below.
 
 ```sh
 npm install marked@^15 marked-terminal cli-highlight
@@ -61,8 +60,8 @@ render(<Demo />);
 - **Width.** `reflowText` defaults to `false`, in which case `marked-terminal`
   leaves paragraphs unwrapped and Ink wraps them to the box. `width` (default
   `80`) only takes effect with `reflowText: true`, which re-wraps paragraphs
-  and sizes horizontal rules to it — pass the terminal width from
-  `useWindowSize()` so it follows resizes.
+  and draws horizontal rules `width - 1` dashes long — pass the terminal width
+  from `useWindowSize()` so it follows resizes.
 - **Colors.** The output contains color codes only when `chalk` detects color
   support (a TTY, or `FORCE_COLOR`). In tests, strip ANSI or set
   `FORCE_COLOR=0` (see `ink-testing`).
@@ -71,20 +70,21 @@ render(<Demo />);
 - `highlight()` takes any [highlight.js
   language](https://github.com/highlightjs/highlight.js/blob/master/SUPPORTED_LANGUAGES.md)
   as `language` and auto-detects when it is omitted — pass it when you know it,
-  since auto-detection can guess wrong on short snippets. Its `theme` option is
-  a [`cli-highlight` theme](https://github.com/felixfbecker/cli-highlight#themes).
+  since auto-detection can guess wrong on short snippets (`print('hi')` is
+  detected as Stylus, not Python). Its `theme` option is a
+  [`cli-highlight` theme](https://github.com/felixfbecker/cli-highlight#themes).
 
 ## The wrapper packages, on Ink 8
 
 | Package | Status | Notes |
 | --- | --- | --- |
 | `ink-markdown` | **cannot be loaded** | CommonJS build that `require()`s Ink: `ERR_REQUIRE_ASYNC_MODULE`. It only wrapped `marked-terminal`, which the recipe above uses directly. |
-| `@kud/ink-markdown` | peer `7.x` | Imports on Ink 8 but rendering was not exercised. An actively developed alternative to watch. |
-| `ink-syntax-highlight` | peer `ink ^5.1.0`, `react ^18.3.1` | Installs only with `--legacy-peer-deps`, but its first frame renders on Ink 8 + React 19. Calling `cli-highlight` directly (above) avoids the conflict. |
+| `@kud/ink-markdown` | peer `ink 7.x` | Needs `--legacy-peer-deps` on Ink 8, where its `MarkdownViewport` renders a `source` string at a given `width` and `height`. It has no `<Markdown>` component. |
+| `ink-syntax-highlight` | peer `ink ^5.1.0`, `react ^18.3.1` | Needs `--legacy-peer-deps` on Ink 8 and React 19, where it renders. It only calls `cli-highlight`, so calling that directly (above) avoids the conflict. |
 
 If you do use `ink-syntax-highlight`:
 
-```tsx no-check
+```tsx
 import React from 'react';
 import {render} from 'ink';
 import SyntaxHighlight from 'ink-syntax-highlight';

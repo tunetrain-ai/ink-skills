@@ -14,11 +14,12 @@ metadata:
 npm install @pppp606/ink-chart
 ```
 
-**Do not install `ink-chart`** — that unscoped name is an unrelated,
-abandoned package with a different API (a default-exported `Chart`), and the
-components below are `undefined` when imported from it. The package
-documented here is the scoped `@pppp606/ink-chart`: ESM, ships its own types,
-peer `ink >=6` (covers Ink 8), and pre-1.0 — pin the version.
+**Do not install `ink-chart`** — that unscoped name is an unrelated package
+with a different API (a default-exported `Chart`): it is a CommonJS build that
+`require()`s Ink, so importing it on Ink 8 throws `ERR_REQUIRE_ASYNC_MODULE`,
+and it has none of the components below. The package documented here is the
+scoped `@pppp606/ink-chart`: ESM, ships its own types, peer `ink >=6` (covers
+Ink 8), and pre-1.0 — pin the version.
 
 ```tsx
 import React from 'react';
@@ -27,7 +28,7 @@ import {BarChart, Sparkline} from '@pppp606/ink-chart';
 
 render(
 	<Box flexDirection="column">
-		<Sparkline data={[1, 3, 2, 8, 4]} width={30} colorScheme="red" caption="Sales Trend" />
+		<Sparkline data={[1, 3, 2, 8, 4]} width={30} threshold={[2, 4, 6]} colorScheme="red" caption="Sales Trend" />
 		<BarChart
 			data={[
 				{label: 'Success', value: 22, color: '#4aaa1a'},
@@ -49,13 +50,22 @@ render(
 | `StackedBarChart` | 100%-stacked or absolute horizontal bars | `data: {label, value, color?, char?}[]`, `mode?: 'percentage' \| 'absolute'`, `max?`, `width?`, `showLabels?`, `showValues?`, `format?: (value, mode) => string` |
 | `LineGraph` | Multi-series line graph with axes | `data: {values: number[], color?}[]`, `width?`, `height?: number`, `yDomain?`, `caption?`, `showYAxis?`, `yLabels?`, `xLabels?` |
 
-It also exports a `useAutoWidth()` hook and the ANSI helpers
-(`red`, `green`, `bold`, `colorize`, …) it uses internally.
+`Sparkline` colours only the values above a `threshold`. A single number paints
+them red whatever the `colorScheme`; an array of thresholds paints a gradient
+in the `colorScheme` (red by default), deeper for each threshold a value
+exceeds. Without a `threshold`, `colorScheme` changes nothing.
+
+Three props are accepted but do nothing: `Sparkline`'s `height`, `BarChart`'s
+`padding`, and the `'inside'` value of `BarChart`'s `showValue` (it draws no
+value, like `'none'`).
+
+It also exports a `useAutoWidth()` hook and its ANSI helpers
+(`red`, `green`, `bold`, `colorize`, …).
 
 ## Hand-rolled bar chart
 
-For a single simple bar chart, a `<Box width>` filled proportionally is
-often less overhead than a dependency:
+A single simple bar chart can be a `<Box width>` filled proportionally, with
+no dependency:
 
 ```tsx
 import React from 'react';
