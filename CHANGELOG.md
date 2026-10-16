@@ -64,11 +64,13 @@ All notable changes to this project are documented in this file.
   manifests (new `version` script). Previously the release workflow's
   "generated files are up to date" gate failed on every tag push.
 - `refresh-upstream.yml` had been failing since 2026-10-05 and never reported
-  that Ink 8 shipped; it now refreshes `data/ecosystem.json` from the registry,
-  fails loudly when the registry is unreachable instead of reporting "no
-  drift", and flags a newer Ink or a status that contradicts a peer range.
-  (It still needs the repo setting "Allow GitHub Actions to create and approve
-  pull requests" — see `CONTRIBUTING.md`.)
+  that Ink 8 shipped. The cause was not the repo setting: the `tunetrain-ai`
+  organization forbids GitHub Actions from creating or approving pull requests,
+  so no repo-level toggle can fix it. It now refreshes `data/ecosystem.json`
+  from the registry, pushes `chore/refresh-upstream`, and opens/updates a
+  tracking issue instead of a PR; it fails loudly when the registry is
+  unreachable instead of reporting "no drift", and flags a newer Ink or a status
+  that contradicts a peer range.
 - `scripts/lib/skills.mjs` resolves the repo root with `fileURLToPath`, so a
   checkout path containing a space or on Windows works.
 - `generate-index.mjs` fails on a skill in a category with no `CATEGORY_META`
@@ -104,7 +106,8 @@ All notable changes to this project are documented in this file.
 - The `skills` CLI used by the discovery smoke test is a locked devDependency
   instead of an unpinned `npx` download.
 - Job timeouts on every workflow; refresh-upstream's write permissions are
-  scoped to its job.
+  scoped to its job, and it no longer runs a third-party action
+  (`create-pull-request`) with a `contents: write` token.
 
 ## 0.1.0 — 2026-09-21
 

@@ -3,7 +3,7 @@
 // resolved from the npm registry. When a package's version, peer range,
 // engines, or deprecation flag has moved it rewrites those registry-derived
 // fields in place, so the refresh-upstream workflow has an actual, committable
-// diff to open a PR with (.sources/ is gitignored and can't carry one).
+// diff to push (.sources/ is gitignored and can't carry one).
 //
 // It deliberately does NOT touch `status`, `note`, or any skill content. Those
 // need a human to re-probe the package against the current Ink (install with
@@ -13,7 +13,8 @@
 // newer Ink than the one the catalog targets.
 //
 // Exits 0 either way; writes `changed=true|false` to $GITHUB_OUTPUT (if set)
-// and a markdown PR-body summary to .sources/drift-summary.md.
+// and a markdown summary (used as the tracking issue's body) to
+// .sources/drift-summary.md.
 
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -77,12 +78,11 @@ if (attention.length > 0) {
 }
 lines.push(
   '',
-  'This PR only refreshes the registry-derived fields (`version`, `peers`, `engines`,',
+  'The refresh only updates the registry-derived fields (`version`, `peers`, `engines`,',
   '`published`, `deprecated`) and the tables generated from them. It does **not** change',
   '`status`, `note`, any skill text, or any `metadata.ink` stamp — re-probe the affected',
   'package against the current Ink (strict-peer install, import, render; see',
-  '`docs/SOURCES.md`), update the data file and skills, then run `npm run check`.',
-  'PRs opened with `GITHUB_TOKEN` do not trigger CI: close and reopen this one to run it.'
+  '`docs/SOURCES.md`), update the data file and skills, then run `npm run check`.'
 );
 
 const summary = lines.join('\n') + '\n';

@@ -96,20 +96,24 @@ via **Actions → Release → Run workflow** with `dry_run` left at its default
 
 `.github/workflows/refresh-upstream.yml` runs weekly, re-resolves every
 package in `data/ecosystem.json` from the npm registry (version, peer ranges,
-engines, last release, deprecation), and opens a PR refreshing those fields
-and the tables generated from them when anything has moved. That PR is a
-*signal*, not a fix: it never changes a package's `status`, a skill, or a
-`metadata.ink` stamp, and its body lists what needs a human (a newer Ink than
-the one the catalog targets, a `status` that now contradicts the declared peer
-range, a deprecation).
+engines, last release, deprecation), and — when anything has moved — pushes
+the refreshed fields and the tables generated from them to the
+`chore/refresh-upstream` branch and opens (or updates) a tracking issue
+labelled `upstream-drift`. That is a *signal*, not a fix: it never changes a
+package's `status`, a skill, or a `metadata.ink` stamp, and the issue lists what
+needs a human (a newer Ink than the one the catalog targets, a `status` that
+now contradicts the declared peer range, a deprecation).
 
-One-time repo setting it needs: **Settings → Actions → General → "Allow GitHub
-Actions to create and approve pull requests"**. Without it the last step fails
-with `GitHub Actions is not permitted to create or approve pull requests`.
-PRs opened with `GITHUB_TOKEN` don't trigger other workflows, so CI won't run
-on the refresh PR by itself — close and reopen it.
+It does not open the pull request itself: the `tunetrain-ai` organization
+forbids GitHub Actions from creating or approving pull requests (the API
+answers `409 The organization does not allow GitHub Actions to create or approve
+pull requests`), and a PR opened with `GITHUB_TOKEN` wouldn't trigger CI
+anyway. Open the PR from the link in the issue; CI runs on it as on any other.
+(If an org admin ever enables that policy, or the workflow is given a GitHub
+App/PAT token, switching the last step to `peter-evans/create-pull-request` is
+a small change.)
 
-When one lands:
+When the issue appears:
 
 1. Re-probe each affected package against the current Ink — strict-peer
    install, `import()` under Node ESM, first-frame render (`docs/SOURCES.md`) —
