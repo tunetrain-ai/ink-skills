@@ -1,0 +1,7 @@
+{
+  // Used only by the type fixtures and fenced snippets that import packages absent from the root
+  // project. Extends the root options (strict, ES2022, react-jsx, types: ["node"]).
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "noEmit": true, "pretty": false, "typeRoots": ["./node_modules/@types"] },
+  "include": [".tsc/**/*.tsx"]
+}

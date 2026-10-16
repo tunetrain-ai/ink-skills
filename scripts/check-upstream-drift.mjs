@@ -23,7 +23,8 @@ import { ROOT } from './lib/skills.mjs';
 import { loadEcosystem, saveEcosystem, installedInkVersion, statusProblems } from './lib/ecosystem.mjs';
 
 const VERSIONS_JSON = join(ROOT, '.sources', 'versions.json');
-const FIELDS = ['version', 'peers', 'engines', 'published', 'deprecated'];
+const FIELDS = ['version', 'peers', 'engines', 'published', 'deprecated', 'maintainers', 'repository', 'dependencies', 'type'];
+const OBJECT_FIELDS = new Set(['peers', 'engines', 'dependencies']);
 
 const data = await loadEcosystem();
 const resolved = JSON.parse(await readFile(VERSIONS_JSON, 'utf8'));
@@ -39,11 +40,30 @@ for (const pkg of data.packages) {
   if (!current || current.error) continue; // fetch failed for this one — don't report drift on bad data
   const moved = FIELDS.filter((f) => f !== 'published' && !same(pkg[f], current[f]));
   for (const f of moved) changes.push({ name: pkg.name, field: f, was: pkg[f], now: current[f] });
-  for (const f of FIELDS) pkg[f] = current[f] ?? (f === 'peers' || f === 'engines' ? {} : null);
+  for (const f of FIELDS) pkg[f] = current[f] ?? (OBJECT_FIELDS.has(f) ? {} : f === 'maintainers' ? [] : null);
+}
+
+// Names a skill warns do NOT exist on npm: record what the registry says today.
+for (const entry of data.notOnNpm ?? []) {
+  const current = resolved[`notOnNpm:${entry.name}`];
+  if (!current || current.error) continue;
+  const was = entry.registry404;
+  entry.registry404 = current.exists === false;
+  if (was !== entry.registry404 && was !== undefined) {
+    changes.push({ name: entry.name, field: 'registry404', was, now: entry.registry404 });
+  }
+  if (current.exists) {
+    // handled below as "needs a human": the skill's warning is no longer true
+  }
 }
 
 // Things a human has to act on, beyond the mechanical refresh.
 const attention = [];
+for (const entry of data.notOnNpm ?? []) {
+  if (entry.registry404 === false) {
+    attention.push(`\`${entry.name}\` now EXISTS on npm — the skill text that says it does not is wrong; re-probe it and update \`notOnNpm\`.`);
+  }
+}
 if (semver.major(latestInk) !== semver.major(targetInk) || semver.minor(latestInk) !== semver.minor(targetInk)) {
   attention.push(
     `**ink ${latestInk} is out; the catalog targets ${targetInk}.** Re-read the release notes and the published ` +

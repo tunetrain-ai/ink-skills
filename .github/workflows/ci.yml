@@ -34,9 +34,17 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tests/external/package-lock.json
 
       # No dependency declares an install script; --ignore-scripts keeps it that way.
       - run: npm ci --ignore-scripts
+
+      # The pinned third-party packages the claim tests probe (peer-excluded / broken CJS /
+      # react-router / meow / create-ink-app). Needs the network once; tests run offline after.
+      - name: Install the external test project
+        run: npm run test:setup
 
       - name: Validate skill structure and ecosystem data
         run: npm run validate
@@ -46,6 +54,9 @@ jobs:
 
       - name: Import every runtime devDependency under Node ESM
         run: npm run smoke
+
+      - name: Prove the claims in the skills (tests/claims)
+        run: npm test
 
       - name: Verify generated files are up to date
         run: |
@@ -62,4 +73,10 @@ jobs:
         run: npx --no-install skills add ./ --list
 
       - name: Verify npm package contents
-        run: npm pack --dry-run
+        run: |
+          npm pack --dry-run --json | node -e '
+            const files = JSON.parse(require("fs").readFileSync(0, "utf8"))[0].files.map((f) => f.path);
+            const leaked = files.filter((p) => /^(tests|scripts|data|docs|\.github)\//.test(p));
+            if (leaked.length) { console.error("not meant to ship:", leaked); process.exit(1); }
+            console.log(files.length + " files in the tarball, none from tests/scripts/data/docs");
+          '

@@ -5,6 +5,7 @@
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { marked } from 'marked';
 import { parse as parseYaml } from 'yaml';
 
 // fileURLToPath, not URL.pathname: pathname keeps percent-encoding (a checkout
@@ -92,13 +93,46 @@ export async function discoverAllDirs() {
   return [SKILLS_DIR, ...(await walk(SKILLS_DIR))];
 }
 
-export function extractCodeFences(markdown) {
-  const fenceRe = /```(tsx|jsx)(\s+no-check)?\r?\n([\s\S]*?)```/g;
-  /** @type {{ lang: string, noCheck: boolean, code: string }[]} */
-  const fences = [];
-  let m;
-  while ((m = fenceRe.exec(markdown))) {
-    fences.push({ lang: m[1], noCheck: Boolean(m[2]), code: m[3] });
+/**
+ * Every fenced code block in a markdown document, in document order (the same order the
+ * claim tests index them by), including fences nested in lists or quotes. Parsed with the
+ * markdown lexer, not a regex, so indented and tagged fences are never silently skipped.
+ * @param {string} markdown
+ * @returns {{ lang: string, info: string, noCheck: boolean, code: string }[]}
+ */
+export function extractFences(markdown) {
+  const out = [];
+  (function walk(tokens) {
+    for (const token of tokens) {
+      if (token.type === 'code') {
+        const info = (token.lang ?? '').trim();
+        out.push({ lang: info.split(/\s+/)[0], info, noCheck: /\bno-check\b/.test(info), code: token.text });
+      } else if (token.type === 'list') {
+        for (const item of token.items) walk(item.tokens ?? []);
+      } else if (token.type === 'blockquote') {
+        walk(token.tokens ?? []);
+      }
+    }
+  })(marked.lexer(markdown.replace(/\r\n/g, '\n'), { gfm: true }));
+  return out;
+}
+
+/** SKILL.md siblings under references/*.md, as { path, markdown }. */
+export async function referenceFiles(skillDir) {
+  const refsDir = join(skillDir, 'references');
+  let entries;
+  try {
+    entries = await readdir(refsDir, { withFileTypes: true });
+  } catch {
+    return [];
   }
-  return fences;
+  return Promise.all(
+    entries
+      .filter((e) => e.isFile() && e.name.endsWith('.md'))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(async (e) => {
+        const path = join(refsDir, e.name);
+        return { path, markdown: await readFile(path, 'utf8') };
+      }),
+  );
 }

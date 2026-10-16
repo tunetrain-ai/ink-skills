@@ -1,0 +1,5 @@
+{
+  // Compiles skill fences that import packages only installed in tests/external.
+  "extends": "./tsconfig.json",
+  "include": [".snippets/**/*.tsx"]
+}

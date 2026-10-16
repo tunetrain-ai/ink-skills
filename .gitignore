@@ -4,3 +4,8 @@ node_modules/
 *.tgz
 .DS_Store
 npm-debug.log*
+tests/.tsc/
+tests/.tmp/
+tests/external/node_modules/
+tests/external/.snippets/
+tests/external/.tsc/
