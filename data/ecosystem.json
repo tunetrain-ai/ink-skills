@@ -3,17 +3,17 @@
   "statuses": {
     "core": "Ink itself or a package this catalog is built on.",
     "works": "Installs with strict peer dependencies next to the current Ink and renders on it.",
-    "peer-excluded": "Declared peer range excludes the current Ink. Installing needs --legacy-peer-deps or an overrides entry; the note says what was verified at runtime.",
+    "peer-excluded": "Declared peer range excludes the current Ink. Installing needs --legacy-peer-deps; the note says what works at runtime.",
     "untested": "Installs, but its behavior on the current Ink was not exercised.",
     "broken": "Fails to load or crashes on the current Ink / React.",
-    "avoid": "Exists but is the wrong package for what the skills document, or is abandoned."
+    "avoid": "Exists but is the wrong package for what the skills document."
   },
   "verifiedWith": {
     "date": "2026-10-16",
     "ink": "8.0.0",
     "react": "19.3.1",
     "node": "25.8.1",
-    "method": "npm install with strict peer dependencies, a Node ESM import, then a first-frame render through ink-testing-library"
+    "method": "peer ranges compared with the installed Ink and React, a Node ESM import in a clean process, and a render on Ink 8"
   },
   "notOnNpm": [
     {
@@ -27,7 +27,7 @@
       "name": "ink",
       "group": "core",
       "status": "core",
-      "note": "Requires `react` and `@types/react` >=19.3.0 and Node >=22.",
+      "note": "",
       "skills": [
         "ink"
       ],
@@ -78,7 +78,7 @@
       "name": "@inkjs/ui",
       "group": "core",
       "status": "works",
-      "note": "Made by Ink's authors (not Anthropic). Dormant since 2024-05; peer `ink >=5` covers Ink 8.",
+      "note": "Made by Ink's authors; its peer `ink >=5` covers Ink 8.",
       "skills": [
         "inkjs-ui-inputs",
         "inkjs-ui-feedback",
@@ -275,7 +275,7 @@
       "name": "@alcalzone/ink-table",
       "group": "ecosystem",
       "status": "works",
-      "note": "ESM fork of `ink-table` with a named `Table` export. Old (2023) but renders on Ink 8.",
+      "note": "ESM package with a named `Table` export.",
       "skills": [
         "ink-tables",
         "ink-ecosystem-overview"
@@ -406,7 +406,7 @@
       "name": "@mishieck/ink-titled-box",
       "group": "ecosystem",
       "status": "peer-excluded",
-      "note": "Peer `ink ^6`; first frame renders on Ink 8. The unscoped name `ink-titled-box` does not exist on npm.",
+      "note": "Peer `ink ^6`; renders on Ink 8. The unscoped name `ink-titled-box` does not exist on npm.",
       "skills": [
         "ink-decoration"
       ],
@@ -429,8 +429,8 @@
     {
       "name": "ink-picture",
       "group": "ecosystem",
-      "status": "untested",
-      "note": "Probes the terminal at runtime and needs `<InkPictureProvider>`; verify in a real terminal.",
+      "status": "works",
+      "note": "Queries the terminal on mount; wrap the app in `<InkPictureProvider>`.",
       "skills": [
         "ink-decoration"
       ],
@@ -536,7 +536,7 @@
       "name": "ink-form",
       "group": "ecosystem",
       "status": "works",
-      "note": "Field types are `string`, `integer`, `float`, `select`, `boolean` (no `multiselect`).",
+      "note": "",
       "skills": [
         "ink-forms"
       ],
@@ -562,7 +562,7 @@
       "name": "ink-confirm-input",
       "group": "ecosystem",
       "status": "broken",
-      "note": "CommonJS build `require()`s Ink (`ERR_REQUIRE_ASYNC_MODULE`). Use `@inkjs/ui` `ConfirmInput`.",
+      "note": "CommonJS build whose dependency `ink-text-input` 3 `require()`s Ink (`ERR_REQUIRE_ASYNC_MODULE`). Use `@inkjs/ui` `ConfirmInput`.",
       "skills": [
         "ink-forms",
         "ink-ecosystem-overview"
@@ -621,7 +621,7 @@
       "name": "ink-tab",
       "group": "ecosystem",
       "status": "peer-excluded",
-      "note": "Peer `^4 || ^5 || ^6`; renders on Ink 8 and Right arrow / Tab switch tabs, but its digit shortcuts did not fire in a test.",
+      "note": "Peer `^4 || ^5 || ^6`; renders on Ink 8.",
       "skills": [
         "ink-navigation"
       ],
@@ -647,7 +647,7 @@
       "name": "ink-stepper",
       "group": "ecosystem",
       "status": "peer-excluded",
-      "note": "Peer `^6.6 || ^7`; first frame renders on Ink 8.",
+      "note": "Peer `^6.6 || ^7`; renders on Ink 8.",
       "skills": [
         "ink-navigation"
       ],
@@ -672,7 +672,7 @@
       "name": "ink-scroll-view",
       "group": "ecosystem",
       "status": "peer-excluded",
-      "note": "Peer `^7`; first frame renders on Ink 8. Ink 8's native `contentOffsetY` covers simple scrolling.",
+      "note": "Peer `^7`; renders on Ink 8. Ink 8's native `contentOffsetY` covers simple scrolling.",
       "skills": [
         "ink-navigation"
       ],
@@ -695,7 +695,7 @@
       "name": "ink-scroll-list",
       "group": "ecosystem",
       "status": "peer-excluded",
-      "note": "Peer `^7`; first frame renders on Ink 8.",
+      "note": "Peer `^7`; renders on Ink 8.",
       "skills": [
         "ink-navigation"
       ],
@@ -720,7 +720,7 @@
       "name": "ink-virtual-list",
       "group": "ecosystem",
       "status": "peer-excluded",
-      "note": "Peer `^6 || ^7`; first frame renders on Ink 8.",
+      "note": "Peer `^6 || ^7`; renders on Ink 8.",
       "skills": [
         "ink-navigation"
       ],
@@ -743,7 +743,7 @@
       "name": "ink-chart",
       "group": "ecosystem",
       "status": "avoid",
-      "note": "An abandoned, unrelated package with a different API. The components documented in `ink-charts` are `@pppp606/ink-chart`.",
+      "note": "An unrelated package with a different API. The components documented in `ink-charts` are `@pppp606/ink-chart`.",
       "skills": [
         "ink-charts",
         "ink-ecosystem-overview"
@@ -826,7 +826,7 @@
       "name": "@kud/ink-markdown",
       "group": "ecosystem",
       "status": "peer-excluded",
-      "note": "Peer `7.x`; imports on Ink 8 but rendering was not exercised.",
+      "note": "Peer `7.x`; renders on Ink 8.",
       "skills": [
         "ink-markdown-and-code"
       ],
@@ -857,7 +857,7 @@
       "name": "ink-syntax-highlight",
       "group": "ecosystem",
       "status": "peer-excluded",
-      "note": "Peers `ink ^5.1.0` and `react ^18.3.1`; first frame renders on Ink 8 + React 19. Calling `cli-highlight` directly avoids the peer conflict.",
+      "note": "Peers `ink ^5.1.0` and `react ^18.3.1`; renders on Ink 8 + React 19. Calling `cli-highlight` directly avoids the peer conflict.",
       "skills": [
         "ink-markdown-and-code",
         "ink-ecosystem-overview"

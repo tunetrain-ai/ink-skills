@@ -127,6 +127,20 @@ export function fakeStdout({ columns = 80, rows = 24, isTTY = true } = {}) {
       else callback?.();
       return true;
     },
+    // a Writable that other code may pipe into (ink-spawn pipes a child's output to Ink's stdout)
+    writable: true,
+    end(chunk, encoding, callback) {
+      if (typeof chunk === 'function') chunk();
+      else if (chunk !== undefined && chunk !== null) out.write(chunk, encoding, callback);
+      out.writable = false;
+      out.emit('finish');
+      return out;
+    },
+    cork() {},
+    uncork() {},
+    setDefaultEncoding() {
+      return out;
+    },
     resize(newColumns, newRows) {
       out.columns = newColumns;
       if (newRows !== undefined) out.rows = newRows;

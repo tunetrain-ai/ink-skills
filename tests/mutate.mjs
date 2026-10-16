@@ -57,7 +57,7 @@ async function run(claim, mutate) {
   const t = countingAssert(null);
   const q = makeQ(claim, mutate);
   try {
-    await withTimeout(claim.fn(t, q), 20_000);
+    await withTimeout(claim.fn(t, q), claim.timeout ?? 20_000);
   } finally {
     for (const cleanup of allHarnessCleanups) await cleanup();
   }

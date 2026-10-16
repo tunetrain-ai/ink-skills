@@ -251,7 +251,7 @@ export function skill(name) {
 
     /** A fact proven by running code. `fn(t, q)`; t has counting assertions, q.tok() binds tokens. */
     fact(file, quotes, opts, fn) {
-      const claim = base('fact', opts.kind, file, quotes, { ctx: opts.ctx ?? [] });
+      const claim = base('fact', opts.kind, file, quotes, { ctx: opts.ctx ?? [], timeout: opts.timeout });
       claim.fn = fn;
       if (COLLECT) return claim;
       test(title(claim), { timeout: opts.timeout ?? 10_000 }, async (ctx) => {
