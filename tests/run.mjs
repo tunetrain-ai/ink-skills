@@ -26,8 +26,7 @@ const res = spawnSync(
   process.execPath,
   [
     '--test',
-    '--test-force-exit',
-    '--test-concurrency=4',
+    `--test-concurrency=${process.env.CLAIMS_CONCURRENCY ?? 4}`,
     '--test-reporter=spec',
     '--test-reporter-destination=stdout',
     '--test-reporter=./tests/lib/reporter.mjs',

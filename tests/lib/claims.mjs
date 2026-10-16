@@ -10,7 +10,7 @@
 // Two modes. Normal: every claim becomes a node:test test. Collect
 // (CLAIMS_COLLECT=1, used by coverage.mjs): claims register but nothing runs.
 
-import test from 'node:test';
+import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs';
 import { join, relative, dirname } from 'node:path';
@@ -23,6 +23,27 @@ import { runFence } from './fence-run.mjs';
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const SKILLS_DIR = join(ROOT, 'skills');
 export const COLLECT = process.env.CLAIMS_COLLECT === '1';
+
+// The end of a claims file. `--test-force-exit` is NOT used: it can end a file's process between two
+// tests and silently drop the rest (seen on a 69-claim file, a few runs in a hundred). This hook runs
+// only once every test of the file has finished; it then closes what a claim or a library left behind
+// (a mount, a child process -- ink-spawn does not stop its process when its component unmounts) and,
+// after the results have had time to flush, ends the process even if a timer inside a library would
+// keep it alive.
+// (only under `node --test`: probes and fixtures import this library too, and must not start a runner)
+if (!COLLECT && process.env.NODE_TEST_CONTEXT) {
+  after(async () => {
+    for (const cleanup of allHarnessCleanups) await cleanup();
+    for (const handle of process._getActiveHandles()) {
+      if (handle?.constructor?.name === 'ChildProcess' && handle.exitCode === null && handle.signalCode === null) handle.kill('SIGKILL');
+    }
+    setTimeout(() => process.exit(process.exitCode ?? 0), 2_000);
+  });
+}
+// generous on purpose: a claim only takes its timeout when it is failing, and CI runners are slower
+// (and busier: several test files run at once) than a laptop
+const DEFAULT_TIMEOUT = 60_000;
+const TYPES_TIMEOUT = 180_000;
 
 /** @type {Claim[]} */
 export const registry = [];
@@ -254,7 +275,7 @@ export function skill(name) {
       const claim = base('fact', opts.kind, file, quotes, { ctx: opts.ctx ?? [], timeout: opts.timeout });
       claim.fn = fn;
       if (COLLECT) return claim;
-      test(title(claim), { timeout: opts.timeout ?? 10_000 }, async (ctx) => {
+      test(title(claim), { timeout: opts.timeout ?? DEFAULT_TIMEOUT }, async (ctx) => {
         if (claim.problems.length) assert.fail(claim.problems.join('\n'));
         const t = countingAssert(ctx);
         const q = makeQ(claim, globalThis.__CLAIMS_MUTATE__);
@@ -281,7 +302,7 @@ export function skill(name) {
       const handle = registerFixture(name, claim.id, fixture, opts);
       claim.fixture = fixture;
       if (COLLECT) return claim;
-      test(title(claim), { timeout: opts.timeout ?? 60_000 }, async () => {
+      test(title(claim), { timeout: opts.timeout ?? TYPES_TIMEOUT }, async () => {
         if (claim.problems.length) assert.fail(claim.problems.join('\n'));
         const missing = claim.quotes.flatMap(({ q }) => factTokens(q)).filter((tk) => !fixture.includes(tk) && !(opts.ctx ?? []).includes(tk));
         if (missing.length) assert.fail(`fact tokens not present in the fixture source: ${missing.map((x) => `"${x}"`).join(', ')}`);
@@ -294,7 +315,7 @@ export function skill(name) {
     fence(file, nth, opts = {}) {
       const claim = base('fence', 'C', file, [], { fence: nth });
       if (COLLECT) return claim;
-      test(`${claim.id} [C] fence ${nth} of ${file}`, { timeout: opts.timeout ?? 10_000 }, async (ctx) => {
+      test(`${claim.id} [C] fence ${nth} of ${file}`, { timeout: opts.timeout ?? DEFAULT_TIMEOUT }, async (ctx) => {
         const { fences } = loadFile(name, file);
         assert.ok(fences[nth], `no fence #${nth} in ${file}`);
         if (opts.run) {

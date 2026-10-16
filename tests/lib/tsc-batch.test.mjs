@@ -43,3 +43,14 @@ test('a marked line that compiles cleanly fails', async () => {
 test('an unmarked error fails', async () => {
   await assert.rejects(checkFixture(hUnexpected), /unexpected TS2322/);
 });
+
+test('a fixture registered after the batch has run is still checked (a top-level await lets tests start early)', async () => {
+  const late = registerFixture('_selftest', 'late', tsx`
+import {Box} from 'ink';
+export const ok = <Box minWidth={4} />;
+export const bad = <Box minWidth="50%" />; //! TS2322
+`);
+  assert.equal(late.diagnostics, null, 'registered after the first run, so it has not been compiled yet');
+  await checkFixture(late);
+  assert.ok(late.diagnostics.length > 0, 'it was compiled in a second run of the same batch');
+});

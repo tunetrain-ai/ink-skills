@@ -111,6 +111,19 @@ are only context (an illustrative HTML snippet, an emphasis word) go in `ctx`, n
 11. **No network.** Tests that need an HTTP server start one on `127.0.0.1` (see `serve()` in
     `ink-decoration.helpers.mjs`); installing the external project is the only network use.
 
+## How the runner ends a file — and why not `--test-force-exit`
+
+`npm test` starts one `node --test` process per claims file. It does **not** pass `--test-force-exit`:
+with that flag a file's process can end between two tests and silently drop the rest (a 69-claim file
+reported 39 tests in a few runs out of a hundred, with no failure and exit code 0). Instead
+`lib/claims.mjs` registers a root `after` hook — it runs only once every test of the file has finished —
+that closes leftover mounts, kills child processes a library left running (`ink-spawn` does not stop its
+process when its component unmounts) and, two seconds later, ends the process in case a timer inside a
+library would keep it alive. The gate catches any file that still comes up short: it fails unless every
+registered claim *passed* in the run it reads. Default timeouts are generous (60 s per fact, 180 s per
+type fixture) because they only matter for a failing claim, and CI runners are slower and busier than a
+laptop; `CLAIMS_CONCURRENCY` (default 4) sets how many files run at once.
+
 ## What the gate counts (`tests/coverage.mjs`)
 
 Units, from the markdown lexer: frontmatter description sentences, prose and list sentences, each

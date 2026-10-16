@@ -83,7 +83,12 @@ jobs:
           fi
 
       # Never release content that hasn't passed the same gate as every PR.
-      - name: Validate, typecheck, and smoke-import
+      # The claim tests probe third-party packages pinned in tests/external (installed with
+      # --ignore-scripts, from its own lockfile).
+      - name: Install the external test project
+        run: npm run test:setup
+
+      - name: Validate, typecheck, smoke-import, and prove the claims
         run: npm run check
 
       - name: Verify generated files are up to date

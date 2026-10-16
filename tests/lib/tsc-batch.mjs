@@ -87,7 +87,9 @@ function runBatch(batch) {
 /** Assert that this fixture produced exactly the diagnostics it declares. */
 export async function checkFixture(handle) {
   const batch = handle.batch;
-  batch.run ??= Promise.resolve().then(() => runBatch(batch));
+  // A test can start before the claims file has registered all its fixtures (a top-level await in the
+  // file lets node:test begin early). A fixture the batch did not know about gets a run of its own.
+  if (!batch.run || handle.diagnostics === null) batch.run = Promise.resolve(batch.run).then(() => runBatch(batch));
   await batch.run;
   const expected = expectedDiagnostics(handle.source);
   const actual = new Set(handle.diagnostics.map((d) => `${d.line}:${d.code}`));

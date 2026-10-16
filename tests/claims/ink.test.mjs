@@ -19,7 +19,10 @@ const { Box, Text, useInput, renderToString } = ink;
 const s = skill('ink');
 const F = 'SKILL.md';
 
+// every await first: node:test starts running claims as soon as they are registered
 const data = await loadEcosystem();
+const uiExports = await import('@inkjs/ui');
+const routerExports = await extImport('react-router');
 const INK = versionOf('ink');
 const REACT = versionOf('react');
 const byName = (name) => data.packages.find((p) => p.name === name);
@@ -173,8 +176,6 @@ const inkDeclarations = (() => {
   const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((entry) => (entry.isDirectory() ? walk(join(dir, entry.name)) : entry.name.endsWith('.d.ts') ? [join(dir, entry.name)] : []));
   return walk(join(installed('ink').dir, 'build')).map((file) => readFileSync(file, 'utf8')).join('\n');
 })();
-const uiExports = await import('@inkjs/ui');
-const routerExports = await extImport('react-router');
 // tokens that name something outside any package. The skill must still cover these; nothing to look up:
 const NOT_AN_API = new Set(['CI=false', 'bin']);
 // example programs and values in a row's description: context, bound to nothing

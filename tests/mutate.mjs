@@ -68,7 +68,7 @@ async function run(claim, mutate) {
   inFlight = claim.id;
   uncaught = null;
   try {
-    await withTimeout(claim.fn(t, q), claim.timeout ?? 20_000);
+    await withTimeout(claim.fn(t, q), claim.timeout ?? 60_000);
     // give a late stray exception its chance to surface before the claim counts as passed
     await new Promise((resolve) => setTimeout(resolve, 20));
   } finally {
