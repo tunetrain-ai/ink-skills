@@ -16,7 +16,7 @@ jobs:
   check:
     name: Validate, typecheck, and verify generated files (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -57,6 +57,21 @@ jobs:
 
       - name: Prove the claims in the skills (tests/claims)
         run: npm test
+
+      # The gate: every sentence, table row, code fence and fence comment in skills/ is covered by a
+      # claim that passed in the run above, and shipped text does not mention how it was checked.
+      - name: Every unit of every skill is covered by a passing claim
+        run: npm run test:coverage -- --require-results
+
+      - name: Keep the coverage report
+        if: always() && matrix.node == '24'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: claim-coverage
+          path: |
+            tests/.tmp/coverage.json
+            tests/.tmp/results.json
+          if-no-files-found: ignore
 
       - name: Verify generated files are up to date
         run: |

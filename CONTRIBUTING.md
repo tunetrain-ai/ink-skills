@@ -24,33 +24,49 @@
    line — never a relative path to another skill's directory. The CLI
    installs every skill to a flat `<agent>/skills/<name>/`, so a relative
    link across skills breaks the moment it's installed.
-5. Every runnable code sample goes in a ` ```tsx ` fence and gets
+5. Every runnable code sample goes in a ` ```tsx ` fence and is
    typechecked in CI against the real `ink`/`react`/`@inkjs/ui` versions in
-   `devDependencies`. Tag a fence ` ```tsx no-check ` only for a
-   deliberately partial snippet (missing imports, undefined helper
-   components) — not as a way to skip fixing a real type error.
+   `devDependencies` (packages that cannot be installed next to Ink 8 are
+   compiled in `tests/external`). A fence must be complete — imports
+   included — and carries a bare language and nothing else; there is no
+   opt-out tag (`npm run validate` rejects one). A placeholder module such as
+   `./app.js` gets a stub in `tests/fence-stubs.json`.
 6. **Verify against the installed `.d.ts` files, not just a package's
    readme.** A package's GitHub readme can be ahead of what's published to
    npm — Ink's own once documented props that didn't exist in the shipped
    types yet. `npm run typecheck` is what catches this; don't skip it.
-7. Run the full gate locally before opening a PR:
+7. **Every statement is proven by a test, and the skill text never says so.**
+   A sentence, list item, table row, code fence or fence comment in `skills/`
+   is covered by a claim in `tests/claims/` that quotes it; if the text
+   changes, the claim fails as stale and has to be re-proven. Edit a skill →
+   run `npm test`, fix or re-anchor the claims it breaks, add claims for what
+   you wrote. A claim that cannot be proven locally is rewritten into a form
+   that can, or deleted. Never mention tests or verification in a skill
+   ("verified", "tested", "first frame", "typechecked" … — the lint fails).
+   `tests/README.md` is the guide to writing claims.
+8. Run the full gate locally before opening a PR:
 
    ```sh
-   npm run check   # validate + typecheck + smoke-import
-   npm run index   # regenerate skills.sh.json, .claude-plugin/*.json, README's table, ecosystem tables
+   npm ci && npm run test:setup   # once: the root project and the pinned tests/external project
+   npm run check      # validate + typecheck + smoke-import + claim tests + coverage gate
+   npm run test:mutate   # the audit: changing a token in the text must fail its claim
+   npm run index      # regenerate skills.sh.json, .claude-plugin/*.json, README's table, ecosystem tables
    ```
 
    CI fails if `npm run index` produces a diff you didn't commit.
-8. **Recommending a new community package?** Add it to
+9. **Recommending a new community package?** Add it to
    `data/ecosystem.json` first (`name`, `group`, `status`, `note`, `skills`),
    run `npm run fetch-sources && npm run check-drift` to fill its registry
    fields, then `npm run index`. Decide `status` by probing it, not by reading
    its peer range — install with strict peers, `import()` it under Node ESM,
-   render it through `ink-testing-library` (see `docs/SOURCES.md`).
-   `npm run validate` fails if a skill names an `ink-*` package that isn't in
-   the data file, or if a status contradicts the declared peer range.
-   If the package installs cleanly and ships types, add it as a
-   `devDependency` so its snippets are typechecked and smoke-imported.
+   render it (see `docs/SOURCES.md`). `npm run validate` fails if a skill names
+   an `ink-*` package that isn't in the data file, or if a status contradicts
+   the declared peer range. If the package installs cleanly and ships types,
+   add it as a `devDependency` so its snippets are typechecked and
+   smoke-imported; otherwise pin it in `tests/external/package.json`. Either
+   way add a render recipe and a note spec in
+   `tests/claims/ink-ecosystem-overview.helpers.mjs` / `.test.mjs`: the matrix
+   test fails for a package it has no recipe for.
 
 ## Release process
 
@@ -116,11 +132,15 @@ a small change.)
 When the issue appears:
 
 1. Re-probe each affected package against the current Ink — strict-peer
-   install, `import()` under Node ESM, first-frame render (`docs/SOURCES.md`) —
-   and re-read its published `.d.ts` files (not just its readme — see point 6
-   above).
+   install, `import()` under Node ESM, render (`docs/SOURCES.md`) — and
+   re-read its published `.d.ts` files (not just its readme — see point 6
+   above). The claim tests compare `data/ecosystem.json` with the *installed*
+   copy of each package, so bump the pin (`devDependencies`, or
+   `tests/external/package.json` and its lockfile via `npm install --prefix
+   tests/external --legacy-peer-deps`) together with the data, and let the tests
+   say which statements stopped being true.
 2. Update `status`/`note` in `data/ecosystem.json`, then the skill(s) that
-   cover it, then `npm run index`.
+   cover it and their claims, then `npm run index`.
 3. If **Ink itself** moved, bump the `ink` devDependency and re-review every
    skill against the new `.d.ts` files; `npm run validate` fails until each
    `metadata.ink` stamp matches the installed `major.minor`.

@@ -16,7 +16,7 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
 import semver from 'semver';
-import { discoverSkillFiles, discoverAllDirs, ROOT, MAX_DEPTH, SKILLS_DIR } from './lib/skills.mjs';
+import { discoverSkillFiles, discoverAllDirs, referenceFiles, extractFences, ROOT, MAX_DEPTH, SKILLS_DIR } from './lib/skills.mjs';
 import { loadEcosystem, installedInkVersion, statusProblems } from './lib/ecosystem.mjs';
 
 const NAME_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -98,6 +98,17 @@ for (const skill of skills) {
       `${loc}: SKILL.md body is ${bodyLines} lines, over the ${MAX_BODY_LINES}-line budget — ` +
         `move detail into references/`
     );
+  }
+
+  // --- code fences: a bare language and nothing else --------------------
+  // Shipped text carries no tooling flags (an info string like `tsx no-check` is one): every fence
+  // is compiled or run by the repo's own checks, so there is nothing to switch off.
+  for (const source of [{ path: skill.skillMdPath, markdown: skill.body }, ...(await referenceFiles(skill.dir))]) {
+    for (const fence of extractFences(source.markdown)) {
+      if (!/^[a-z][a-z0-9+-]*$/.test(fence.info)) {
+        fail(`${relative(ROOT, source.path)}: code fence with info string "${fence.info}" — use a bare language (tsx, sh, json, ...) and nothing after it`);
+      }
+    }
   }
 
   // --- duplicate names -------------------------------------------------

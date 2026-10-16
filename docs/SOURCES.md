@@ -39,8 +39,13 @@ declare ranges that exclude it yet render fine. So each package is probed:
    ESM with top-level `await`, so a CommonJS package that `require()`s it
    throws `ERR_REQUIRE_ASYNC_MODULE`. A package that bundles its own copy of an
    old Ink can crash here too.
-3. **Render** a minimal tree through `ink-testing-library` and check the first
-   frame. For a peer-excluded package install it with `--legacy-peer-deps` first.
+3. **Render** a minimal tree on Ink 8 and read what it drew. For a
+   peer-excluded package install it with `--legacy-peer-deps` first.
+
+These probes are executable. `tests/claims/ink-ecosystem-overview.test.mjs`
+runs all three for every package in the data file — the install offline, with
+stub packages that carry the real peer ranges, so npm itself decides — and
+fails when a status or a note stops being true.
 
 Statuses (`status` in the data file):
 
@@ -48,15 +53,16 @@ Statuses (`status` in the data file):
 | --- | --- |
 | `core` | Ink itself, or a package this catalog is built on. |
 | `works` | Installs with strict peers and renders on the current Ink. |
-| `peer-excluded` | The declared peer range excludes the current Ink. Installing needs `--legacy-peer-deps` or an `overrides` entry; the note says what was verified at runtime. |
-| `untested` | Installs, but its behavior on the current Ink was not exercised. |
+| `peer-excluded` | The declared peer range excludes the current Ink. Installing needs `--legacy-peer-deps`; the note says what works at runtime. |
+| `untested` | Installs, but its behavior on the current Ink was not exercised. (No package has this status today; the claim tests have no case for it, so a package given it fails them.) |
 | `broken` | Fails to load or crashes on the current Ink / React. |
-| `avoid` | Exists but is the wrong package for what the skills document, or is abandoned. |
+| `avoid` | Exists but is the wrong package for what the skills document. |
 
 `npm run validate` cross-checks `works` and `peer-excluded` against the
 registry-derived peer range, so a refresh PR that moves a range fails CI until
-someone re-probes the package and flips its status. A first-frame render is
-evidence, not a guarantee: it does not exercise input handling or resizing.
+someone re-probes the package and flips its status. A render proves the package
+loads and draws; what it does with input or a resize is proven only where a
+skill says so.
 
 ## Core
 
