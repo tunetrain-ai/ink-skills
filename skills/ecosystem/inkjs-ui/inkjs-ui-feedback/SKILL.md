@@ -22,10 +22,10 @@ const Example = () => <Spinner label="Loading" />;
 | `label` | `string` | Shown next to the spinner glyph. |
 | `type` | spinner name | From [`cli-spinners`](https://github.com/sindresorhus/cli-spinners) — default `'dots'`. |
 
-For a fully custom spinner (different timing model, `time`/`delta`-based
-animation instead of a fixed frame set), drop down to Ink's own
-`useAnimation` hook — see `ink-animation-and-performance` — rather than
-trying to configure this component beyond its `type` choices.
+`Spinner` takes only `label` and `type`: its frames and interval come from the
+chosen `type`. For a fully custom spinner (different timing model,
+`time`/`delta`-based animation instead of a fixed frame set), use Ink's own
+`useAnimation` hook instead — see `ink-animation-and-performance`.
 
 ## `ProgressBar`
 
@@ -51,12 +51,14 @@ import {Badge} from '@inkjs/ui';
 const Example = () => <Badge color="green">Passing</Badge>;
 ```
 
-`children: ReactNode` (required), `color?: TextProps['color']` (default
-`'magenta'`) — accepts the same color values as Ink's `<Text color>`.
+`children: ReactNode` (required; a string is shown upper-cased),
+`color?: TextProps['color']` (default `'magenta'`, used as the badge's
+background) — accepts the same color values as Ink's `<Text color>`.
 
 ## `StatusMessage`
 
-A single-line message prefixed with a variant-colored symbol.
+A message for one line of text, prefixed with a variant-colored symbol (longer
+text wraps, aligned after the symbol).
 
 ```tsx
 import React from 'react';
@@ -66,7 +68,7 @@ const Example = () => <StatusMessage variant="success">Deployed successfully</St
 ```
 
 `variant: 'info' | 'success' | 'error' | 'warning'` is **required** — there's
-no default, since the variant is the entire point of the component.
+no default: without one, no symbol is drawn.
 
 ## `Alert`
 
@@ -96,6 +98,7 @@ is optional.
 | A short inline tag/label | `Badge` |
 | One line of pass/fail/warn/info feedback | `StatusMessage` |
 | A boxed, possibly multi-line message, optionally titled | `Alert` |
-| A list of completed steps that shouldn't re-render | `<Static>` (`ink-static-output`) or `ink-task-runners`' `ink-task-list` |
+| A list of completed steps that shouldn't re-render | `<Static>` (`ink-static-output`) |
+| A list of steps whose status changes in place | `ink-task-list` (`ink-task-runners`) |
 
 Related skills: ink-animation-and-performance, ink-static-output, ink-task-runners

@@ -80,7 +80,7 @@ const Example = () => (
 ```
 
 Note: `@inkjs/ui` does **not** re-export `<Text>` — import it from `ink`
-directly, as above. Every list item's content must still be `<Text>` (or
-another nested list), same constraint as Ink's own `<Box>`/`<Text>` rule.
+directly, as above. Text in a list item must still be inside
+`<Text>` — a bare string throws, as it does anywhere in Ink.
 
 Related skills: ink-text-styling, ink-tables
