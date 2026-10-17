@@ -1,6 +1,6 @@
 ---
 name: ink-animation-and-performance
-description: Animate Ink components with useAnimation (frame/time/delta/reset, a single shared internal timer), and tune render performance with maxFps, incrementalRendering, and concurrent mode (useTransition/useDeferredValue). Use for spinners, progress animations, or "my UI updates too fast/flickers" performance questions.
+description: Animate Ink components with useAnimation (frame/time/delta/reset, a single shared internal timer), and tune how Ink renders with maxFps, incrementalRendering, and the concurrent option (Suspense, useTransition and useDeferredValue work with or without it). Use for spinners, progress animations, or "my UI updates too fast/flickers" performance questions.
 metadata:
   ink: "8.0.0"
   category: core
@@ -11,8 +11,8 @@ metadata:
 ## `useAnimation(options?)`
 
 Drives frame-based animation. All components using `useAnimation` share a
-**single internal timer**, so many animated components on screen still
-consolidate into one render cycle rather than each running its own interval.
+**single internal timer**: many animated components run off one timer rather
+than each starting its own interval.
 
 ```tsx
 import React from 'react';
@@ -33,7 +33,7 @@ const Spinner = () => {
 
 | Return value | Type | Use for |
 | --- | --- | --- |
-| `frame` | `number` | Discrete counter, +1 per interval — indexed sequences like spinner frames. |
+| `frame` | `number` | Discrete counter, +1 per interval elapsed (it jumps by more when renders are throttled) — indexed sequences like spinner frames. |
 | `time` | `number` | Total elapsed ms since start/reset — continuous math like `Math.sin(time / 1000 * Math.PI * 2)`. |
 | `delta` | `number` | Ms since the previous *rendered* tick (accounts for throttled renders) — physics/velocity-driven motion: `position += speed * delta`. |
 | `reset` | `() => void` | Resets `frame`/`time`/`delta` to `0`, restarts timing — for one-shot animations triggered by an event. |
@@ -46,24 +46,20 @@ directly when you need custom frames, `time`-based easing, or
 ## Performance controls on `render()`
 
 Set on `render(tree, options)` — see `ink-rendering-and-lifecycle` for the
-full option list. Three matter specifically for animation-heavy or
-fast-updating UIs:
+full option list.
 
-- **`maxFps`** (default `30`) caps how often a frame is actually written,
-  independent of how often your components re-render — lower it for
-  components that update far more often than a terminal needs to redraw, to
-  cut CPU.
+- **`maxFps`** (default `30`) caps how many frames per second Ink writes,
+  however often your components re-render; a lower value writes fewer frames.
 - **`incrementalRendering`** (default `false`) redraws only the lines that
-  changed instead of the whole frame — reduces flicker on wide/tall UIs
-  that update small regions frequently. It also skips each changed line's
-  unchanged prefix when safe; lines with unsupported terminal controls fall
-  back to a whole-line redraw.
-- **`concurrent`** (default `false`) turns on React Concurrent Mode:
-  `Suspense` boundaries behave correctly with async data, and
-  `useTransition`/`useDeferredValue` become functional, letting updates be
-  interrupted for higher-priority work. See `ink-async-and-suspense` for
-  `Suspense` specifics. Note: some tests need `act()` under concurrent mode
-  to reliably await updates, and reusing the same `stdout` across renders
-  without unmounting is unsupported regardless of mode.
+  changed instead of the whole frame. It also skips each changed line's
+  unchanged prefix when safe; a line containing an OSC 8 hyperlink is redrawn
+  whole.
+- **`concurrent`** (default `false`) changes when `render()` writes: it then
+  returns before the initial output is written, where by default that output is
+  already written when it returns. `Suspense`, `useTransition` and
+  `useDeferredValue` do not need it — they work in either mode; see
+  `ink-async-and-suspense` for `Suspense` specifics. Reusing the same `stdout`
+  for another `render()` without unmounting is unsupported in either mode: Ink
+  warns on stderr and keeps the first instance's options.
 
 Related skills: ink-async-and-suspense, ink-rendering-and-lifecycle, inkjs-ui-feedback

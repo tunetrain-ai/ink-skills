@@ -4,6 +4,47 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Every statement in the skills is covered by a test.** Each sentence, list item, table row, code
+  fence and fence comment in `skills/` (838 units) is covered by a claim in `tests/claims/` that
+  quotes it and proves it against the real packages — rendered output, the published types, the
+  escape sequences Ink writes, a clean-process `import()`, npm itself (offline, with stub packages
+  that carry each package's real peer ranges). Third-party packages that cannot be installed next to
+  Ink 8 are tested from the pinned `tests/external` project. Nothing under `tests/` is published, and
+  the skill text does not mention it. `npm test` runs the claims, `npm run test:coverage` is the gate
+  (every unit covered by a claim that passed; shipped text may not mention how it was checked),
+  `npm run test:mutate` changes each fact a claim reads and requires the claim to fail. CI runs the
+  gate on Node 22 and 24. `tests/README.md` explains how to write a claim.
+- `npm run validate` rejects a code fence whose info string is anything but a bare language: the
+  `tsx no-check` tag is gone and every fence is compiled (or run, where the prose describes its output).
+
+### Fixed — statements the tests disproved
+
+- **Process and rendering:** a pending promise alone does *not* keep an Ink process alive (timers, open
+  handles and active input do); `concurrent: true` is *not* required for `Suspense`, `use()`,
+  `useTransition` or `useDeferredValue` (it only changes whether `render()` has written its first
+  output when it returns); Ctrl+C exits the app before any `useInput` handler unless
+  `exitOnCtrlC: false`; `useWindowSize`'s fallback order; resize redraws rather than leaving ghost lines.
+- **Components:** `<Static>` counts items (a shrink, a replaced item or a mutated item changes nothing,
+  and items are unmounted once written); `<Newline>` beside siblings in a `<Box>` leaves two blank rows;
+  `measureElement` does not return zeros during render (only `useBoxMetrics` on the first render does);
+  `display` is `flex` or `none`; a `<Box>` without a border or background renders nothing itself;
+  custom border glyph sets need all eight glyphs; the `truncate-middle` example output was wrong;
+  `useFocus` `isActive: false` and `disableFocus()` semantics; screen-reader output order.
+- **Input:** `useInput` fires per keypress, not per character; kitty-protocol behaviour restated as the
+  exact escape sequences and flag bits Ink handles; emulator-specific key mappings removed.
+- **Ecosystem:** `EmailInput` has no `suggestions` (it is not "the same shape as `TextInput`");
+  `ink-chart` cannot even be imported on Ink 8; `ink-confirm-input` fails through its bundled
+  `ink-text-input` 3; `ink-picture` works on Ink 8 and its `width`/`height` default to `"100%"`;
+  `ink-gradient` colours every line on its own (a single string with `\n` is not one continuous
+  gradient); cfonts ignores `space` (`spaceless` works, and `ink-big-text`'s types do not list it);
+  `@kud/ink-markdown` has no `<Markdown>` component; `ink-spawn`'s `<Spawn>` does not stop its process
+  on unmount and crashes Node when stdin is a file or `/dev/null`; `ink-tab`'s digit shortcuts need Alt.
+- Volatile or unprovable text removed: release dates, "dormant", "abandoned", "no current alternative
+  exists", opinions about maintenance, and performance claims ("cuts CPU", "reduces flicker", "most
+  common cause").
+
 ### Changed
 
 - **Targets Ink 8.0.0** (requires Node `>=22`, `react` / `@types/react`

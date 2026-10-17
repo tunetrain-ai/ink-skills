@@ -1,6 +1,6 @@
 ---
 name: ink-task-runners
-description: Task-list UIs with per-step status (ink-task-list) and composing and running child processes with live status (ink-spawn). Use when the user wants a "running task 1, 2, 3..." UI or needs to spawn and display subprocess output with status; also covers why ink-progress-bar no longer works on Ink 8.
+description: Task-list UIs with per-step status (ink-task-list) and composing and running child processes with live status (ink-spawn). Use when the user wants a live list of tasks, each with its own status, or needs to spawn and display subprocess output with status; also covers why ink-progress-bar does not work on Ink 8.
 metadata:
   ink: "8.0.0"
   category: ecosystem
@@ -36,13 +36,13 @@ a [`cli-spinners`](https://github.com/sindresorhus/cli-spinners) entry); the
 types reject it without one. `Task` also takes `status` and `output` strings —
 `status` renders in brackets after the label (`✔ Build [3/10]`) and `output`
 as an indented `→ …` line below it — and nested `Task` children for a sub-step
-breakdown, shown when `isExpanded`. Peer `ink >=3.0.0` covers Ink 8, and it renders there
-(`✔ Built`, `◼ Pending`, an animated spinner for `loading`). No current
-alternative exists specifically for this "list of labeled steps" shape. For a
-list of items that should permanently stop re-rendering once complete (rather
-than update their status in place), `<Static>` (`ink-static-output`) may be the
-simpler fit — the difference is whether items still need to *change* state
-(`ink-task-list`) or are done the moment they appear (`<Static>`).
+breakdown, shown when `isExpanded` (an expanded task shows `❯` in place of its
+state glyph). Peer `ink >=3.0.0` covers Ink 8, and it renders there
+(`✔ Built`, `◼ Pending`, an animated spinner for `loading`). Outside Windows the
+glyphs are Unicode unless `TERM` is `linux`, where it draws `√ Built` and
+`■ Pending`. `<Static>` (`ink-static-output`) writes each item once and never
+updates it, so it fits items that are done the moment they appear;
+`ink-task-list` redraws a `Task` in place when its `state` changes.
 
 ## `ink-spawn` — composable subprocess execution with status
 
@@ -67,25 +67,31 @@ const App = () => (
 );
 ```
 
-`<Spawn>` starts its process on mount, kills it on unmount, shows a status
-(running/succeeded/failed) and the tail of its output, and propagates
-Ctrl+C. A finished `<Spawn command="echo" args={['hi']} />` renders
-`✔ Ran 'echo hi'`. `<Script>` composes multiple `<Spawn>`/`<Script>` children —
-sequential by default (renders only completed steps plus the currently
-running one), or `parallel` to run all children at once. Scripts nest
-arbitrarily (parallel inside sequential inside parallel...), which is the
-main reason to reach for this over hand-rolling subprocess orchestration
-with `useEffect` (see `ink-async-and-suspense`'s subprocess pattern) — once
-you need more than one subprocess with dependencies between them, `ink-spawn`
-handles the sequencing your own `useEffect` chain would otherwise have to.
-Peer `ink >=4.0.0`; the last release was 2024-11.
+`<Spawn>` starts its process on mount and does not stop it on unmount. It shows
+a status (running, succeeded or failed); while running it also shows the tail
+of the output — at most `maxOutputLines` lines, 5 by default, the empty line
+after a final newline included — and after a failure the stderr. A failure
+sets `process.exitCode` to the process's exit code. `<Spawn>` forwards
+`SIGINT` and `SIGTERM` received by the Node process to its process, and sends
+it `SIGTERM` when the Node process exits. `<Spawn>` crashes the Node process
+with `TypeError: dest.end is not a function` when stdin is a file or
+`/dev/null`; with a pipe it is fine. A finished
+`<Spawn command="echo" args={['hi']} />` renders `✔ Ran 'echo hi'`.
+
+`<Script>` composes multiple `<Spawn>`/`<Script>` children — sequential by
+default (renders only completed steps plus the currently running one), or
+`parallel` to run all children at once. Scripts nest (parallel inside
+sequential inside parallel...), so once you need more than one subprocess with
+dependencies between them, `ink-spawn` handles the sequencing that your own
+`useEffect` chain (see `ink-async-and-suspense`'s subprocess pattern) would
+otherwise have to. Peer `ink >=4.0.0`.
 
 ## `ink-progress-bar` — don't use it on Ink 8
 
-`ink-progress-bar` is a much older, CommonJS package that `require()`s Ink,
+`ink-progress-bar` is a CommonJS package that `require()`s Ink,
 so it throws `ERR_REQUIRE_ASYNC_MODULE` on Ink 8 (see
-`ink-ecosystem-overview`) — its documentation also still imports Ink's
-long-removed `<Color>` component. Use `@inkjs/ui`'s `ProgressBar`
+`ink-ecosystem-overview`) — its README also still imports `<Color>` from Ink,
+which Ink no longer exports. Use `@inkjs/ui`'s `ProgressBar`
 (`inkjs-ui-feedback`) instead: it takes `value` as a number from `0` to `100`.
 (If you meet old code using `ink-progress-bar`, its `percent` prop was a
 *fraction* between 0 and 1 — don't carry that scale over to `value`.)

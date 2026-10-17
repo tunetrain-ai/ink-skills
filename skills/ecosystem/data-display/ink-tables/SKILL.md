@@ -12,9 +12,9 @@ metadata:
 
 The original `ink-table` is a CommonJS package that `require()`s Ink, so it
 throws `ERR_REQUIRE_ASYNC_MODULE` on Ink 8 and cannot be used (see
-`ink-ecosystem-overview`). `@alcalzone/ink-table` is an ESM fork with the same
-props and a **named** `Table` export. Its last release is old (2023) but it
-renders on Ink 8 and installs with strict peer dependencies.
+`ink-ecosystem-overview`). `@alcalzone/ink-table` is an ESM package with the
+same props (its `columns` also accepts `{key, align}` objects) and a **named**
+`Table` export. It renders on Ink 8 and installs with strict peer dependencies.
 
 ```sh
 npm install @alcalzone/ink-table
@@ -37,13 +37,13 @@ render(<Table data={data} columns={['name', {key: 'age', align: 'right'}]} />);
 | --- | --- | --- |
 | `data` | `T[]` | Rows — array of plain objects whose values are `string \| number \| boolean \| null \| undefined`. **Required.** |
 | `columns` | `(keyof T \| {key: keyof T; align?: 'left' \| 'right' \| 'center'})[]` | Which keys to show, in order. Defaults to the union of the keys of **all** rows. |
-| `padding` | `number` | Cell padding. |
-| `header` | `(props) => JSX.Element` | Custom header-row renderer. |
+| `padding` | `number` | Spaces of padding on each side of a cell; the default is `1` and `0` counts as `1`. |
+| `header` | `(props) => JSX.Element` | Custom renderer for each header cell. |
 | `cell` | `(props: {column: number; children}) => JSX.Element` | Custom cell renderer. |
 | `skeleton` | `(props) => JSX.Element` | Custom border/divider renderer. |
 
 `Table` is a class component and `T` must be an object type with scalar
-values: declare row types with `type Row = {…}` (an `interface` has no index
+values: declare row types with a `type` alias (an `interface` has no index
 signature and is rejected) or let TypeScript infer them from the array, as
 above. Nested objects and arrays are not supported as cell values — format
 them to strings first.

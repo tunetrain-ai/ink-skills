@@ -32,7 +32,7 @@ render(<Example />);
 | Option | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `autoFocus` | `boolean` | `false` | Focus this component automatically if nothing else is focused yet. |
-| `isActive` | `boolean` | `true` | Set `false` to disable focus *without* removing the component from the tab order — for a temporarily-disabled input. |
+| `isActive` | `boolean` | `true` | Set `false` to make Tab and `focus(id)` skip this component while it stays registered: it keeps its place in the tab order and takes it again when `true` — for a temporarily-disabled input. A component that is focused when it becomes inactive loses focus. |
 | `id` | `string` | — | A stable id for jumping to this component with `focus(id)` directly, instead of cycling. Must be unique among focusable components (duplicates share one slot in the tab order). |
 
 ## `useFocusManager()` — control focus programmatically
@@ -40,7 +40,7 @@ render(<Example />);
 | Method | Purpose |
 | --- | --- |
 | `enableFocus()` | Re-enable focus management (on by default — only needed after `disableFocus()`). |
-| `disableFocus()` | Disable focus management for all components; the active component loses focus. |
+| `disableFocus()` | Disable focus management for all components: Tab and Shift+Tab stop moving focus and the active component loses focus (`focus(id)`, `focusNext()` and `focusPrevious()` still work). |
 | `focusNext()` | Move to the next focusable component (what Ink calls internally on Tab). Goes to the first if none is active; wraps to the first from the last. |
 | `focusPrevious()` | Move to the previous component (what Ink calls on Shift+Tab). Goes to the last if none is active; wraps to the last from the first. |
 | `focus(id)` | Jump directly to the component registered with that `id`. No-op if no component with that id exists or it has `isActive: false`. |
@@ -65,9 +65,11 @@ const JumpToSearch = () => {
 
 ## Building a focusable list
 
-Give every list item a stable `id` and let Tab/Shift+Tab cycle naturally, or
-drive selection yourself with arrow keys plus `useInput` and track the
-selected index in state — the two approaches don't have to be combined.
+Give every list item a stable `id` (an `id` that changes re-registers the item
+at the end of the tab order and drops its focus) and let Tab/Shift+Tab cycle
+naturally, or drive selection yourself with arrow keys plus `useInput` and
+track the selected index in state — the two approaches don't have to be
+combined.
 `@inkjs/ui`'s `Select` and `MultiSelect` (see `inkjs-ui-inputs`) already
 implement arrow-key selection so you don't need `useFocus` for a typical
 single list; reach for `useFocus`/`useFocusManager` when you have **multiple

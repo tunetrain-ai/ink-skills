@@ -8,9 +8,8 @@ metadata:
 
 # Accessibility
 
-Ink implements a small, deliberately limited subset of the
-[ARIA specification](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA)
-for terminal screen readers.
+Ink supports screen readers through ARIA-style props (`aria-label`, `aria-hidden`,
+`aria-role`, `aria-state`) and the `useIsScreenReaderEnabled` hook.
 
 ## Enabling screen reader support
 
@@ -58,7 +57,7 @@ checks). All four only change output while screen reader support is enabled.
 | --- | --- | --- | --- |
 | `aria-label` | `<Box>`, `<Text>` | `string` | Overrides what's read for this element — use when the visible text alone isn't descriptive enough. |
 | `aria-hidden` | `<Box>`, `<Text>` | `boolean` (default `false`) | Removes the element from the screen-reader tree entirely. |
-| `aria-role` | `<Box>` | `string` | One of: `button`, `checkbox`, `combobox`, `list`, `listbox`, `listitem`, `menu`, `menuitem`, `option`, `progressbar`, `radio`, `radiogroup`, `tab`, `tablist`, `table`, `textbox`, `timer`, `toolbar`. |
+| `aria-role` | `<Box>` | one of the roles listed | Spoken before the element's text, unless the parent `<Box>` has the same role. One of: `button`, `checkbox`, `combobox`, `list`, `listbox`, `listitem`, `menu`, `menuitem`, `option`, `progressbar`, `radio`, `radiogroup`, `tab`, `tablist`, `table`, `textbox`, `timer`, `toolbar`. |
 | `aria-state` | `<Box>` | `object` | Any of `busy`, `checked`, `disabled`, `expanded`, `multiline`, `multiselectable`, `readonly`, `required`, `selected` (all `boolean`). |
 
 ```tsx
@@ -70,12 +69,11 @@ const Checkbox = () => (
 		<Text>Accept terms and conditions</Text>
 	</Box>
 );
-// screen reader reads: "(checked) checkbox: Accept terms and conditions"
+// screen reader reads: "checkbox: (checked) Accept terms and conditions"
 ```
 
-`aria-label` is the tool for content that's visually compact but needs a
-fuller spoken description — a progress bar rendered as colored blocks with
-just "50%" as text:
+`aria-label` replaces an element's text with a fuller spoken description — for
+example a progress bar rendered as colored blocks with just "50%" as text:
 
 ```tsx
 import React from 'react';
@@ -92,13 +90,14 @@ const Progress = () => (
 
 ## General principles for custom components
 
-- **Prefer semantic `aria-role`/`aria-state` over visual-only cues.** Color
-  and glyphs (✔, ✗) communicate nothing to a screen reader by themselves.
-- **Use `useIsScreenReaderEnabled` to render fundamentally different output**
-  when the visual layout wouldn't make sense read linearly (e.g. a table —
-  see `ink-tables` — probably needs a row-by-row spoken summary rather than
-  reading the grid character by character).
+- **Prefer semantic `aria-role`/`aria-state` over visual-only cues.** Screen
+  reader output carries no color, and a glyph (✔, ✗) is just a character in the
+  text; `aria-role` and `aria-state` add the role and state as words.
+- **Use `useIsScreenReaderEnabled` to render different output** when the visual
+  layout doesn't read well in order: screen reader output has no borders or
+  column padding and joins the children of a row with a single space (e.g. a
+  table — see `ink-tables` — can render a row-by-row summary instead).
 - `@inkjs/ui` components (see the `inkjs-ui-*` skills) don't set ARIA props
-  themselves — wrap them in a `<Box aria-role=… aria-state=…>` yourself.
+  themselves — wrap them in a `<Box>` with `aria-role` and `aria-state` yourself.
 
 Related skills: ink-text-styling, inkjs-ui-feedback, ink-tables

@@ -10,8 +10,9 @@ metadata:
 
 ## `<Text>`
 
-The only component that renders characters. `<Text>` allows only text nodes
-and nested `<Text>` components as children — `<Box>` cannot be nested inside
+The component that renders text — a string placed directly inside a `<Box>`
+throws. `<Text>` allows only text nodes and text components (nested `<Text>`,
+`<Newline>`, `<Transform>`) as children — `<Box>` cannot be nested inside
 `<Text>`.
 
 ```tsx
@@ -37,11 +38,11 @@ render(<Example />);
 
 | Prop | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `color` | `string` | — | Powered by [chalk](https://github.com/chalk/chalk) — named colors, hex (`"#005cc5"`), `rgb(...)`. |
+| `color` | `string` | — | Powered by [chalk](https://github.com/chalk/chalk) — chalk's named colors (`green`, `redBright`), hex (`"#005cc5"`), `rgb(...)`, `ansi256(...)`. Any other string is ignored. |
 | `backgroundColor` | `string` | — | Same value space as `color`. |
-| `dimColor` | `boolean` | `false` | Makes the color less bright. |
+| `dimColor` | `boolean` | `false` | Dims the text (the terminal's faint attribute). |
 | `bold` / `italic` / `underline` / `strikethrough` | `boolean` | `false` | |
-| `inverse` | `boolean` | `false` | Swaps foreground/background. |
+| `inverse` | `boolean` | `false` | Reverse video (SGR 7) — swaps foreground/background. |
 | `wrap` | `'wrap' \| 'hard' \| 'truncate' \| 'truncate-start' \| 'truncate-middle' \| 'truncate-end'` | `'wrap'` | See below. `truncate` is an alias for `truncate-end`. |
 
 ### Wrap modes
@@ -55,19 +56,20 @@ const Example = () => (
 		<Text wrap="truncate-middle">Hello World</Text>
 	</Box>
 );
-// => 'He…ld'
+// => 'Hel…rld'
 ```
 
 - `wrap` (default): breaks onto multiple lines at word boundaries.
-- `hard`: fills every line to the full column width, breaking words if needed.
+- `hard`: fills each line to the full column width, breaking words wherever a line ends.
 - `truncate*`: renders one line, cutting the rest with `…` at the end, start,
   or middle.
 
 ## `<Newline count?>`
 
-Inserts one or more `\n` characters. Must be used inside `<Text>` — a raw
-`\n` in a string works too, but `<Newline>` reads clearly when interleaving
-differently-styled `<Text>` runs:
+Inserts one or more `\n` characters. Must be used inside `<Text>` — as a
+sibling in a `<Box>` it is a text node of its own and leaves two blank rows
+instead of ending the line. A raw `\n` in a string works too, while
+`<Newline>` can sit between differently-styled `<Text>` runs:
 
 ```tsx
 import React from 'react';
@@ -87,8 +89,8 @@ render(<Example />);
 ## `<Spacer>`
 
 A flexible space that expands along the major axis of its containing
-`<Box>`, filling all available room between siblings — the standard way to
-push content to opposite ends of a row (or top/bottom of a tall column):
+`<Box>`, filling all available room between siblings, so it pushes content to
+opposite ends of a row (or to the top and bottom of a tall column):
 
 ```tsx
 import React from 'react';
@@ -110,12 +112,13 @@ container needs a fixed `height` tall enough to see the gap.
 
 ## `<Transform transform={(line, index) => string}>`
 
-Rewrites the plain-text output of its `<Text>` children before it's written —
-used by packages like `ink-gradient` and `ink-link` (see `ink-decoration`)
-that need a plain string to apply their own effect to. `<Transform>` must
-wrap only `<Text>` descendants and must not change the output's dimensions
-(no adding/removing lines or characters that change wrapped width), or the
-surrounding layout will be wrong.
+Rewrites the rendered text of its `<Text>` children before it's written —
+used by packages like `ink-gradient` and `ink-link` (see `ink-decoration`),
+whose effects work on a string rather than on React elements. `<Transform>`
+must wrap only text (`<Text>` or a plain string; a `<Box>` throws) and must
+not change the output's dimensions (no adding/removing lines or characters
+that change wrapped width): layout is computed before `transform` runs, so
+the surrounding layout will be wrong.
 
 ```tsx
 import React from 'react';
@@ -161,8 +164,9 @@ render(
 ```
 
 **Warning:** when children use styling props like `color`/`bold`, the string
-passed to `transform` contains raw ANSI escape codes. Whitespace/substring
-operations (`.trim()`, slicing) need ANSI-aware helpers (`slice-ansi`,
-`strip-ansi`) or they'll corrupt the escape sequences.
+passed to `transform` contains raw ANSI escape codes. `.trim()` then leaves the
+whitespace between those codes in place and slicing by index can cut an escape
+sequence in half, so use ANSI-aware helpers (`slice-ansi`, `strip-ansi`) for
+whitespace and substring operations.
 
 Related skills: ink-layout, ink-decoration, ink-borders-and-backgrounds

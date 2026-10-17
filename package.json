@@ -1,7 +1,7 @@
 {
   "name": "@tunetrain-ai/ink-skills",
   "version": "0.1.0",
-  "description": "Hierarchical agent skills catalog for Ink (React for CLIs) — core concepts, components, hooks, and ecosystem, for Claude Code and any Agent Skills-compatible client.",
+  "description": "Hierarchical agent skills catalog for Ink (React for CLIs) \u2014 core concepts, components, hooks, and ecosystem, for Claude Code and any Agent Skills-compatible client.",
   "license": "MIT",
   "type": "module",
   "author": "tunetrain.ai",
@@ -37,12 +37,16 @@
     "validate": "node scripts/validate.mjs",
     "typecheck": "node scripts/typecheck-snippets.mjs",
     "index": "node scripts/generate-index.mjs",
-    "check": "npm run validate && npm run typecheck && npm run smoke",
+    "check": "npm run validate && npm run typecheck && npm run smoke && npm test && npm run test:coverage -- --require-results",
     "fetch-sources": "node scripts/fetch-sources.mjs",
     "check-drift": "node scripts/check-upstream-drift.mjs",
     "format": "prettier --write \"skills/**/*.md\" \"*.md\" \"scripts/**/*.mjs\"",
     "version": "npm run index && git add skills.sh.json .claude-plugin README.md docs skills",
-    "smoke": "node scripts/smoke-imports.mjs"
+    "smoke": "node scripts/smoke-imports.mjs",
+    "test": "node tests/run.mjs",
+    "test:setup": "npm ci --prefix tests/external",
+    "test:coverage": "node tests/coverage.mjs",
+    "test:mutate": "node tests/mutate.mjs"
   },
   "devDependencies": {
     "@alcalzone/ink-table": "^1.1.1",

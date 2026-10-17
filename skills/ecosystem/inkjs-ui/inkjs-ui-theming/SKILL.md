@@ -9,8 +9,8 @@ metadata:
 # `@inkjs/ui` theming
 
 Every `@inkjs/ui` component reads its styles from a shared `Theme` via
-React context — you don't pass style props to individual components, you
-override the theme they all read from.
+React context — apart from `Badge`'s `color`, you don't pass style props to
+individual components; you override the theme they all read from.
 
 ## `ThemeProvider`
 
@@ -30,15 +30,16 @@ const App = () => (
 A `Theme` is `{components: Record<string, ComponentTheme>}` — keyed by
 component name, each with an optional `styles` map (functions returning
 style objects, given the component's current props/state) and an optional
-`config` **function** (returns non-style behavioral defaults — it is a
-function, not a map). Writing one from scratch is rarely worth it — extend
-`defaultTheme` instead (below).
+`config` **function** (returns non-style settings, such as the characters a
+`ProgressBar` draws with — it is a function, not a map). A theme that leaves a
+component out makes that component throw, so extend `defaultTheme` instead
+(below).
 
 ## `extendTheme` — override just what you need
 
 `extendTheme(originalTheme, newTheme)` deep-merges a partial theme onto an
-existing one — the standard way to tweak a couple of colors without
-redefining every component's full style function:
+existing one — a way to tweak a couple of colors without redefining every
+component's full style function:
 
 ```tsx
 import React from 'react';
@@ -61,21 +62,19 @@ const App = () => (
 );
 ```
 
-Component style keys and what they accept aren't documented per-component —
-read each component's shipped declaration,
+Read each component's shipped declaration,
 `node_modules/@inkjs/ui/build/components/<name>/theme.d.ts`, for the exact key
-names and what each style function receives and returns. They vary per
+names and what each style function receives and returns. The keys vary per
 component: `Spinner` has `container` (`BoxProps`), `frame` and `label`
 (`TextProps`); `Badge` has `container` (given `{color}`) and `label`.
 
 ## `useComponentTheme` — read the active theme
 
 For a custom component built to match `@inkjs/ui`'s look, read the current
-theme the same way its built-in components do:
+theme the same way its built-in components do.
 
-Define the component's theme with `satisfies ComponentTheme` (the pattern
-`@inkjs/ui` uses itself) so its style functions keep their precise types, then
-register it with `extendTheme`:
+Define the component's theme with `satisfies ComponentTheme` so its style
+functions keep their precise types, then register it with `extendTheme`:
 
 ```tsx
 import React from 'react';

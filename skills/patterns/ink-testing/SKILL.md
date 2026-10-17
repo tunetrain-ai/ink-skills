@@ -29,14 +29,14 @@ lastFrame() === 'Hello World'; // => true
 
 | Field | Type | Purpose |
 | --- | --- | --- |
-| `lastFrame()` | `() => string \| undefined` | The most recent write to stdout — normally the latest frame — as the raw string Ink wrote. `undefined` before the first write. |
-| `frames` | `string[]` | Every stdout write so far: the rendered frames plus any `useStdout().write` output — assert on intermediate states, not just the final one. |
+| `lastFrame()` | `() => string \| undefined` | The most recent write to stdout — normally the latest frame — as the raw string Ink wrote; already set when `render()` returns. |
+| `frames` | `string[]` | Every stdout write so far — the rendered frames, and `useStdout().write(text)` as an entry holding `text` followed by the current frame — assert on intermediate states, not just the final one. |
 | `stdin` | fake stream | Has its own `write(data: string)` — see below. |
 | `stdout` | fake stream | Same array and function as the top-level `frames`/`lastFrame()` (`stdout.frames === frames`). |
-| `stderr` | fake stream | Own `frames`/`lastFrame()`; captures `useStderr().write` output only. |
+| `stderr` | fake stream | Own `frames`/`lastFrame()`; `useStderr().write` output lands here (and the current frame is written to `frames` again). |
 | `rerender(tree)` | `(tree) => void` | Update props / replace the root, same as the real `Instance.rerender`. |
-| `unmount()` | `() => void` | Unmount the component under test. |
-| `cleanup()` | `() => void` | Tear down this fake instance entirely. The standalone `cleanup` export does the same for every instance created so far — call it in an `afterEach`. |
+| `unmount()` | `() => void` | Unmount the component under test; the writes it makes while unmounting end with an empty string, so `lastFrame()` is `''` afterwards. |
+| `cleanup()` | `() => void` | Same as `unmount()` on Ink 8 (Ink's own `cleanup` unmounts). The standalone `cleanup` export unmounts every instance created so far — call it in an `afterEach`. |
 
 ## Simulating keyboard input
 
@@ -66,21 +66,23 @@ lastFrame() === '1'; // => true
 ```
 
 For a single printable character, `stdin.write('a')` is enough — no escape
-sequence needed. For special keys (arrows, Enter, Tab), write the raw ANSI
-escape sequence the terminal would have sent; check `key.*` in your handler
-matches what you expect the sequence to produce.
+sequence needed. For special keys (arrows, Enter, Tab), write the raw
+bytes the terminal would have sent (`\u001B[A` for Up, `\r` for Enter, `\t` for
+Tab); check `key.*` in your handler matches what you expect the sequence to
+produce.
 
-As of Ink 8, unrecognized control sequences (mouse, focus, cursor reports)
-are dropped before `useInput`, so writing them via `stdin.write` in tests no
-longer reaches the handler.
+Ink 8 drops unrecognized control sequences (mouse, focus, cursor reports)
+before `useInput`, so writing them via `stdin.write` in tests never reaches the
+handler.
 
 ## Asserting on styled output
 
 `lastFrame()` returns exactly what Ink wrote — colors appear as ANSI codes
-(`\x1b[32m…`) when chalk detects color support (a local TTY, `FORCE_COLOR`).
-For stable assertions run tests with `FORCE_COLOR=0` or strip ANSI first. If a
-test genuinely needs to verify color was applied, that's a sign to test at a
-lower level (the component's props) rather than the rendered string.
+(`\x1b[32m…`) when chalk detects color support (a color-capable local terminal,
+`FORCE_COLOR`). For stable assertions run tests with `FORCE_COLOR=0` or strip
+ANSI first. If a test genuinely needs to verify color was applied, that's a
+sign to test at a lower level (the component's props) rather than the rendered
+string.
 
 The fake `stdout` reports `columns` as `100` but has no `rows` or `isTTY`, so
 `useWindowSize()` returns 100 columns and a row count taken from the host
@@ -91,11 +93,11 @@ pass the size into such components as a prop so tests can pin it.
 
 Ink detects `CI` and switches to writing only the final frame instead of
 continuously overwriting (see `ink-rendering-and-lifecycle`). `frames`
-accumulates every render regardless of interactive mode, so this rarely
-matters for `ink-testing-library` tests specifically — it matters when
-snapshot-testing a real `render()` (not the testing-library one) by spawning
-the CLI as a subprocess in CI and expecting to see intermediate frames; set
-`CI=false` in that subprocess's environment if the test depends on seeing
-more than the final frame.
+accumulates every render regardless of interactive mode, so it makes no
+difference to `ink-testing-library` tests — it matters when snapshot-testing a
+real `render()` (not the testing-library one) by spawning the CLI as a
+subprocess in CI and expecting to see intermediate frames; set `CI=false` in
+that subprocess's environment if the test depends on seeing more than the
+final frame.
 
 Related skills: ink-rendering-and-lifecycle, ink-input-handling

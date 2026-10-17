@@ -9,11 +9,10 @@ metadata:
 # `@inkjs/ui` inputs
 
 `@inkjs/ui` (peer `ink >=5`, which covers Ink 8) is the component library by Ink's
-authors (`vadimdemedes/ink-ui`; not an Anthropic project). Its last release was
-2024-05, but it renders on Ink 8. Its inputs are uncontrolled — there is no
-`value` prop — each managing its own keyboard handling internally.
-Prefer these over hand-rolling the same thing with `useInput` unless a
-component's behavior genuinely doesn't fit.
+authors (`vadimdemedes/ink-ui`; not an Anthropic project). It renders on Ink 8.
+Its inputs are uncontrolled — there is no `value` prop — each managing its own
+keyboard handling internally. Prefer these over hand-rolling the same thing
+with `useInput` unless a component's behavior is a poor fit.
 
 ```sh
 npm install @inkjs/ui
@@ -40,15 +39,16 @@ const Example = () => (
 | `isDisabled` | `boolean` (default `false`) | Ignores input while disabled. |
 | `placeholder` | `string` | Shown when empty. |
 | `defaultValue` | `string` | Initial value. |
-| `suggestions` | `string[]` | Autocomplete candidates. |
-| `onChange` | `(value: string) => void` | Fires on every keystroke. |
+| `suggestions` | `string[]` | Autocomplete candidates; Enter accepts the first one that starts with the typed text. |
+| `onChange` | `(value: string) => void` | Fires each time the value changes. |
 | `onSubmit` | `(value: string) => void` | Fires on Enter. |
 
 ## `EmailInput`
 
-Same shape as `TextInput` plus `domains?: string[]` (default: the common
-providers — aol.com, gmail.com, yahoo.com, hotmail.com, live.com,
-outlook.com, icloud.com, hey.com) used to autocomplete after `@`.
+Same props as `TextInput` except `suggestions`, plus `domains?: string[]`
+(default: the common providers — aol.com, gmail.com, yahoo.com, hotmail.com,
+live.com, outlook.com, icloud.com, hey.com) used to autocomplete after `@`
+(Enter accepts the suggestion).
 
 ```tsx
 import React from 'react';
@@ -59,9 +59,9 @@ const Example = () => <EmailInput placeholder="Enter email..." onSubmit={console
 
 ## `PasswordInput`
 
-Same as `TextInput` minus `suggestions`/`defaultValue` (a password field
-starting pre-filled or autocompletable would defeat the point) — masks
-input as it's typed.
+Same as `TextInput` minus `suggestions`/`defaultValue` — masks input as it's
+typed, showing each character as `*` (the callbacks still receive the real
+text).
 
 ```tsx
 import React from 'react';
@@ -72,8 +72,8 @@ const Example = () => <PasswordInput placeholder="Enter password..." onSubmit={c
 
 ## `ConfirmInput`
 
-A yes/no prompt. `onConfirm`/`onCancel` are **required**, not optional —
-there's no meaningful default behavior for a confirmation with no handlers.
+A yes/no prompt: Y confirms and N cancels, in either case. `onConfirm`/`onCancel`
+are **required**, not optional — pressing the key for a missing handler throws.
 
 ```tsx
 import React from 'react';
@@ -113,15 +113,15 @@ const Example = () => (
 
 `options: {label: string; value: string}[]` is required. `visibleOptionCount`
 (default `5`) caps how many options render at once — the list scrolls
-internally as the user moves past that. `highlightText` highlights a
-substring within option labels (useful when combining `Select` with a
-filter/search input above it).
+internally as the user moves past that. `highlightText` highlights the
+first occurrence of a substring within option labels — pass a filter/search
+input's text to it when combining `Select` with one above it.
 
 ## `MultiSelect`
 
 Same shape as `Select` but `defaultValue`/`onChange` are `string[]`, and it
 adds `onSubmit?: (value: string[]) => void` for confirming the whole
-selection with Enter (vs. `onChange` firing on every toggle).
+selection with Enter (vs. `onChange` firing on every Space toggle).
 
 ```tsx
 import React from 'react';

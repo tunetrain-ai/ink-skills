@@ -25,13 +25,12 @@ answer and defer to it.
   second skill when the task genuinely spans two concerns (e.g. a focusable, animated
   list touches both `ink-focus-management` and `ink-animation-and-performance`).
 - **Don't route for plain React/JavaScript questions** that happen to occur inside an Ink
-  project (e.g. "how do I use `useReducer`?") — those aren't Ink-specific, answer directly.
+  project (e.g. a question about `useReducer`) — those aren't Ink-specific, answer directly.
 - **New project?** Start at `ink-getting-started` regardless of the specific question —
-  it covers the scaffold, TypeScript/ESM setup, and `package.json` `bin` wiring that
-  almost every other skill assumes is already in place.
+  it covers the scaffold, TypeScript/ESM setup, and `package.json` `bin` wiring.
 - **Recommending a third-party component?** Always load `ink-ecosystem-overview` first
   and check its compatibility table. A peer range does not tell you whether a package works
-  on Ink 8: several popular ones cannot be loaded at all (`ink-table`, `ink-markdown`,
+  on Ink 8: several packages cannot be loaded at all (`ink-table`, `ink-markdown`,
   `ink-progress-bar`, `ink-divider`) even though their ranges look permissive, while others
   declare ranges that exclude Ink 8 yet render on it (`ink-tab`, `ink-scroll-view`).
 
@@ -82,11 +81,10 @@ answer and defer to it.
 ## Compatibility
 
 Every sub-skill's frontmatter carries `metadata.ink` pinning the Ink version its examples
-were verified against (currently `8.0.0`, peer `react >=19.3.0` / `@types/react >=19.3.0`,
+target (currently `8.0.0`, peer `react >=19.3.0` / `@types/react >=19.3.0`,
 Node `>=22`). If the user's `package.json` pins an older Ink major, say so before applying
-an example — flexbox defaults and several hook signatures changed across majors (see
-`ink-layout` and `ink-input-handling` for the specifics that matter most). Ink 8 breaking
-changes to watch for: `<Box>` `minWidth`/`maxWidth` are number-only, `render()` streams are
+an example; the Ink 8 specifics are in `ink-layout` and `ink-input-handling`. Ink 8
+specifics to watch for: `<Box>` `minWidth`/`maxWidth` are number-only, `render()` streams are
 typed `NodeJS.WritableStream`/`NodeJS.ReadableStream`, and `useInput` drops unrecognized
 control sequences.
 

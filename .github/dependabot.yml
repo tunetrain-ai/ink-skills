@@ -44,6 +44,24 @@ updates:
           - 'semver'
           - 'skills'
 
+  # The pinned third-party packages the claim tests probe. A bump here re-probes automatically:
+  # the tests fail if a status or claim stops being true. Peer-excluded packages mean some of
+  # these PRs may need a human (legacy-peer-deps resolution is not always updated cleanly).
+  - package-ecosystem: npm
+    directory: /tests/external
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    groups:
+      external-probe:
+        patterns:
+          - '*'
+    ignore:
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+
   - package-ecosystem: github-actions
     directory: /
     schedule:

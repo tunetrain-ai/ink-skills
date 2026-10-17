@@ -4,10 +4,10 @@
 left/up (in cells), and `overflow="hidden"` clips whatever falls outside the
 box. Ink does not track the offset, read input, or clamp it — you keep
 `scrollTop` in state, bound it to the measured content, and wire it to keys.
-Verified against ink 8.0.0.
 
 The pattern: a fixed-size `overflow="hidden"` **viewport** with
-`contentOffsetY={scrollTop}`, wrapping a **content** box that holds everything.
+`flexDirection="column"` and `contentOffsetY={scrollTop}`, wrapping a **content**
+box that holds everything.
 Measure both with `useBoxMetrics` and clamp `scrollTop` to
 `content.height - viewport.clientHeight`.
 
@@ -67,17 +67,21 @@ const App = () => (
 render(<App />);
 ```
 
-`useBoxMetrics` returns zeros until the first layout pass, so the first frame
-shows the top of the content (`maxScrollTop` is `0`) and the view settles on
-the next render.
+`useBoxMetrics` returns zeros until the first layout pass, so on the first
+render the view shows the top of the content (`maxScrollTop` is `0`) and it
+settles on the next render.
 
 ## Gotchas
 
 - **Keep `flexShrink={0}` on the content wrapper.** Boxes shrink by default, so
-  without it Yoga squeezes the wrapper — and the rows inside it — down to the
-  viewport height. The rows then overlap (20 rows in a 5-row viewport rendered
-  `Row 4`, `Row 8`, `Row 12`, `Row 16`, `Row 20`), `content.height` equals the
-  viewport height, `maxScrollTop` is `0`, and nothing scrolls.
+  without it Yoga squeezes the wrapper down to the viewport height and shrinks
+  the rows inside it to fit. The rows then overlap (20 rows in a 5-row viewport
+  rendered `Row 4`, `Row 8`, `Row 12`, `Row 16`, `Row 20`), `content.height`
+  equals the viewport height, `maxScrollTop` is `0`, and nothing scrolls.
+- **The viewport must be a column** (`flexDirection="column"`). In the default
+  row direction the content wrapper is stretched across the cross axis to the
+  viewport's height, so its measured height equals the viewport's and nothing
+  can scroll.
 - **Padding goes on the content wrapper, not the viewport.**
   `clientWidth`/`clientHeight` exclude borders but not padding, and padding does
   not clip, so `content.height - clientHeight` is only exact for an unpadded
@@ -101,10 +105,9 @@ the next render.
 ## When to still window
 
 Everything inside a `contentOffset` viewport is laid out and measured, even the
-rows that are clipped, so the cost grows with the total item count. For very
-large or unbounded lists, render only the slice that fits instead — **windowing**:
-keep a scroll index in state and slice the data before rendering. This version
-assumes one item per row.
+rows that are clipped. For very large or unbounded lists, render only the slice
+that fits instead — **windowing**: keep a scroll index in state and slice the
+data before rendering. This version assumes one item per row.
 
 ```tsx
 import React, {useState} from 'react';
@@ -145,7 +148,7 @@ export default ScrollList;
 ```
 
 Slicing by item **count** stops being exact once items have different heights
-(wrapped text, nested boxes). Either keep items one row tall, or reach for
-`ink-scroll-view`, `ink-scroll-list`, or `ink-virtual-list` (see
-`ink-navigation`) — `contentOffset` handles variable heights on its own, so a
-library is only needed for virtualization.
+(wrapped text, nested boxes): rows overlap and an item can be overwritten.
+Either keep items one row tall, or use `contentOffset`, which handles variable
+heights on its own, or one of `ink-scroll-view`, `ink-scroll-list` and
+`ink-virtual-list` (see `ink-navigation`).

@@ -3,22 +3,23 @@
   "statuses": {
     "core": "Ink itself or a package this catalog is built on.",
     "works": "Installs with strict peer dependencies next to the current Ink and renders on it.",
-    "peer-excluded": "Declared peer range excludes the current Ink. Installing needs --legacy-peer-deps or an overrides entry; the note says what was verified at runtime.",
+    "peer-excluded": "Declared peer range excludes the current Ink. Installing needs --legacy-peer-deps; the note says what works at runtime.",
     "untested": "Installs, but its behavior on the current Ink was not exercised.",
     "broken": "Fails to load or crashes on the current Ink / React.",
-    "avoid": "Exists but is the wrong package for what the skills document, or is abandoned."
+    "avoid": "Exists but is the wrong package for what the skills document."
   },
   "verifiedWith": {
     "date": "2026-10-16",
     "ink": "8.0.0",
     "react": "19.3.1",
     "node": "25.8.1",
-    "method": "npm install with strict peer dependencies, a Node ESM import, then a first-frame render through ink-testing-library"
+    "method": "peer ranges compared with the installed Ink and React, a Node ESM import in a clean process, and a render on Ink 8"
   },
   "notOnNpm": [
     {
       "name": "ink-titled-box",
-      "useInstead": "@mishieck/ink-titled-box"
+      "useInstead": "@mishieck/ink-titled-box",
+      "registry404": true
     }
   ],
   "packages": [
@@ -26,7 +27,7 @@
       "name": "ink",
       "group": "core",
       "status": "core",
-      "note": "Requires `react` and `@types/react` >=19.3.0 and Node >=22.",
+      "note": "",
       "skills": [
         "ink"
       ],
@@ -40,13 +41,44 @@
         "node": ">=22"
       },
       "published": "2026-10-03T11:23:24.474Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "sindresorhus",
+        "vdemedes"
+      ],
+      "repository": "https://github.com/vadimdemedes/ink",
+      "dependencies": {
+        "chalk": "^6.0.1",
+        "is-in-ci": "^2.0.0",
+        "auto-bind": "^5.0.1",
+        "cli-boxes": "^4.0.1",
+        "quick-lru": "^7.3.0",
+        "type-fest": "^5.10.0",
+        "wrap-ansi": "^10.0.2",
+        "cli-cursor": "^4.0.0",
+        "es-toolkit": "^1.52.0",
+        "ansi-styles": "^7.0.0",
+        "signal-exit": "^3.0.7",
+        "stack-utils": "^2.0.6",
+        "widest-line": "^6.0.0",
+        "yoga-layout": "~3.2.1",
+        "ansi-escapes": "^7.3.0",
+        "cli-truncate": "^6.0.0",
+        "code-excerpt": "^4.0.0",
+        "string-width": "^8.3.0",
+        "indent-string": "^5.0.0",
+        "patch-console": "^2.0.0",
+        "terminal-size": "^4.0.1",
+        "react-reconciler": "^0.34.0",
+        "@alcalzone/ansi-tokenize": "^0.3.1"
+      },
+      "type": "module"
     },
     {
       "name": "@inkjs/ui",
       "group": "core",
       "status": "works",
-      "note": "Made by Ink's authors (not Anthropic). Dormant since 2024-05; peer `ink >=5` covers Ink 8.",
+      "note": "Made by Ink's authors; its peer `ink >=5` covers Ink 8.",
       "skills": [
         "inkjs-ui-inputs",
         "inkjs-ui-feedback",
@@ -61,7 +93,19 @@
         "node": ">=18"
       },
       "published": "2024-05-22T12:20:05.842Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "sindresorhus",
+        "vdemedes"
+      ],
+      "repository": "https://github.com/vadimdemedes/ink-ui",
+      "dependencies": {
+        "chalk": "^5.3.0",
+        "cli-spinners": "^3.0.0",
+        "deepmerge": "^4.3.1",
+        "figures": "^6.1.0"
+      },
+      "type": "module"
     },
     {
       "name": "ink-testing-library",
@@ -79,7 +123,14 @@
         "node": ">=18"
       },
       "published": "2024-05-22T10:51:25.909Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "sindresorhus",
+        "vdemedes"
+      ],
+      "repository": "https://github.com/vadimdemedes/ink-testing-library",
+      "dependencies": {},
+      "type": "module"
     },
     {
       "name": "ink-text-input",
@@ -98,7 +149,17 @@
         "node": ">=18"
       },
       "published": "2024-05-14T08:03:18.946Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "sindresorhus",
+        "vdemedes"
+      ],
+      "repository": "https://github.com/vadimdemedes/ink-text-input",
+      "dependencies": {
+        "chalk": "^5.3.0",
+        "type-fest": "^4.18.2"
+      },
+      "type": "module"
     },
     {
       "name": "ink-spinner",
@@ -117,7 +178,16 @@
         "node": ">=14.16"
       },
       "published": "2023-03-01T21:04:55.602Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "sindresorhus",
+        "vdemedes"
+      ],
+      "repository": "https://github.com/vadimdemedes/ink-spinner",
+      "dependencies": {
+        "cli-spinners": "^2.7.0"
+      },
+      "type": "module"
     },
     {
       "name": "ink-select-input",
@@ -136,7 +206,17 @@
         "node": ">=18"
       },
       "published": "2025-04-29T11:34:35.176Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "sindresorhus",
+        "vdemedes"
+      ],
+      "repository": "https://github.com/vadimdemedes/ink-select-input",
+      "dependencies": {
+        "figures": "^6.1.0",
+        "to-rotated": "^1.0.0"
+      },
+      "type": "module"
     },
     {
       "name": "ink-multi-select",
@@ -152,7 +232,18 @@
         "node": ">=8"
       },
       "published": "2020-09-28T14:27:47.597Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "gkaragkiaouris"
+      ],
+      "repository": "https://github.com/karaggeorge/ink-multi-select",
+      "dependencies": {
+        "arr-rotate": "^1.0.0",
+        "figures": "^2.0.0",
+        "lodash.isequal": "^4.5.0",
+        "prop-types": "^15.5.10"
+      },
+      "type": null
     },
     {
       "name": "ink-table",
@@ -170,13 +261,21 @@
       },
       "engines": {},
       "published": "2023-12-06T11:41:46.780Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "maticzav"
+      ],
+      "repository": "https://github.com/maticzav/ink-table",
+      "dependencies": {
+        "object-hash": "^2.0.3"
+      },
+      "type": null
     },
     {
       "name": "@alcalzone/ink-table",
       "group": "ecosystem",
       "status": "works",
-      "note": "ESM fork of `ink-table` with a named `Table` export. Old (2023) but renders on Ink 8.",
+      "note": "ESM package with a named `Table` export.",
       "skills": [
         "ink-tables",
         "ink-ecosystem-overview"
@@ -188,7 +287,15 @@
       },
       "engines": {},
       "published": "2023-03-17T21:55:10.676Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "alcalzone"
+      ],
+      "repository": "https://github.com/AlCalzone/ink-table",
+      "dependencies": {
+        "object-hash": "^2.0.3"
+      },
+      "type": "module"
     },
     {
       "name": "ink-link",
@@ -206,7 +313,15 @@
         "node": ">=18"
       },
       "published": "2025-09-13T13:24:21.965Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "sindresorhus"
+      ],
+      "repository": "https://github.com/sindresorhus/ink-link",
+      "dependencies": {
+        "terminal-link": "^5.0.0"
+      },
+      "type": "module"
     },
     {
       "name": "ink-gradient",
@@ -225,7 +340,17 @@
         "node": ">=20"
       },
       "published": "2026-05-29T13:41:26.036Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "sindresorhus"
+      ],
+      "repository": "https://github.com/sindresorhus/ink-gradient",
+      "dependencies": {
+        "@types/gradient-string": "^1.1.6",
+        "gradient-string": "^3.0.0",
+        "strip-ansi": "^7.1.2"
+      },
+      "type": "module"
     },
     {
       "name": "ink-big-text",
@@ -244,7 +369,16 @@
         "node": ">=14.16"
       },
       "published": "2023-03-24T09:11:44.637Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "sindresorhus"
+      ],
+      "repository": "https://github.com/sindresorhus/ink-big-text",
+      "dependencies": {
+        "cfonts": "^3.1.1",
+        "prop-types": "^15.8.1"
+      },
+      "type": "module"
     },
     {
       "name": "ink-divider",
@@ -258,13 +392,21 @@
       "peers": {},
       "engines": {},
       "published": "2025-03-25T18:18:31.013Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "juresotosek"
+      ],
+      "repository": "https://github.com/JureSotosek/ink-divider",
+      "dependencies": {
+        "ink": "^5.1.0"
+      },
+      "type": "module"
     },
     {
       "name": "@mishieck/ink-titled-box",
       "group": "ecosystem",
       "status": "peer-excluded",
-      "note": "Peer `ink ^6`; first frame renders on Ink 8. The unscoped name `ink-titled-box` does not exist on npm.",
+      "note": "Peer `ink ^6`; renders on Ink 8. The unscoped name `ink-titled-box` does not exist on npm.",
       "skills": [
         "ink-decoration"
       ],
@@ -276,13 +418,19 @@
       },
       "engines": {},
       "published": "2026-01-25T10:50:24.838Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "mishieck"
+      ],
+      "repository": "https://github.com/Mishieck/ink-titled-box",
+      "dependencies": {},
+      "type": "module"
     },
     {
       "name": "ink-picture",
       "group": "ecosystem",
-      "status": "untested",
-      "note": "Probes the terminal at runtime and needs `<InkPictureProvider>`; verify in a real terminal.",
+      "status": "works",
+      "note": "Queries the terminal on mount; wrap the app in `<InkPictureProvider>`.",
       "skills": [
         "ink-decoration"
       ],
@@ -295,7 +443,21 @@
         "node": ">=18"
       },
       "published": "2026-07-07T15:12:27.780Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "endernoke"
+      ],
+      "repository": "https://github.com/endernoke/ink-picture",
+      "dependencies": {
+        "chalk": "^5.6.2",
+        "is-unicode-supported": "^2.1.0",
+        "iterm2-version": "^6.0.0",
+        "jimp": "^1.6.1",
+        "node-fetch": "^3.3.2",
+        "sixel": "^0.16.0",
+        "supports-color": "^10.2.2"
+      },
+      "type": "module"
     },
     {
       "name": "ink-progress-bar",
@@ -310,7 +472,16 @@
       "peers": {},
       "engines": {},
       "published": "2019-04-12T21:00:17.489Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "greenjello"
+      ],
+      "repository": null,
+      "dependencies": {
+        "blacklist": "^1.1.4",
+        "prop-types": "^15.7.2"
+      },
+      "type": null
     },
     {
       "name": "ink-task-list",
@@ -327,7 +498,13 @@
       },
       "engines": {},
       "published": "2022-05-01T01:10:59.895Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "hirokiosame"
+      ],
+      "repository": "https://github.com/privatenumber/ink-task-list",
+      "dependencies": {},
+      "type": null
     },
     {
       "name": "ink-spawn",
@@ -344,13 +521,22 @@
       },
       "engines": {},
       "published": "2024-11-28T12:29:46.168Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "kraenhansen"
+      ],
+      "repository": "https://github.com/kraenhansen/ink-spawn",
+      "dependencies": {
+        "bufout": "^0.3.1",
+        "ink-spinner": "^5.0.0"
+      },
+      "type": "module"
     },
     {
       "name": "ink-form",
       "group": "ecosystem",
       "status": "works",
-      "note": "Field types are `string`, `integer`, `float`, `select`, `boolean` (no `multiselect`).",
+      "note": "",
       "skills": [
         "ink-forms"
       ],
@@ -361,13 +547,22 @@
       },
       "engines": {},
       "published": "2026-08-22T01:23:50.878Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "lukasbach"
+      ],
+      "repository": "https://github.com/lukasbach/ink-form",
+      "dependencies": {
+        "ink-select-input": "^5.0.0",
+        "ink-text-input": "^6.0.0"
+      },
+      "type": "module"
     },
     {
       "name": "ink-confirm-input",
       "group": "ecosystem",
       "status": "broken",
-      "note": "CommonJS build `require()`s Ink (`ERR_REQUIRE_ASYNC_MODULE`). Use `@inkjs/ui` `ConfirmInput`.",
+      "note": "CommonJS build whose dependency `ink-text-input` 3 `require()`s Ink (`ERR_REQUIRE_ASYNC_MODULE`). Use `@inkjs/ui` `ConfirmInput`.",
       "skills": [
         "ink-forms",
         "ink-ecosystem-overview"
@@ -381,7 +576,17 @@
         "node": ">=10"
       },
       "published": "2019-09-11T13:35:25.601Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "kevva"
+      ],
+      "repository": "https://github.com/kevva/ink-confirm-input",
+      "dependencies": {
+        "ink-text-input": "^3.2.1",
+        "prop-types": "^15.5.10",
+        "yn": "^3.1.1"
+      },
+      "type": null
     },
     {
       "name": "ink-quicksearch-input",
@@ -398,13 +603,25 @@
       },
       "engines": {},
       "published": "2019-12-10T23:48:07.656Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "john-osullivan"
+      ],
+      "repository": "https://github.com/Eximchain/ink-quicksearch-input",
+      "dependencies": {
+        "@types/has-ansi": "^3.0.0",
+        "@types/lodash.isequal": "^4.5.5",
+        "has-ansi": "3.0.0",
+        "keypress": "^0.2.1",
+        "lodash.isequal": "4.5.0"
+      },
+      "type": null
     },
     {
       "name": "ink-tab",
       "group": "ecosystem",
       "status": "peer-excluded",
-      "note": "Peer `^4 || ^5 || ^6`; renders on Ink 8 and Right arrow / Tab switch tabs, but its digit shortcuts did not fire in a test.",
+      "note": "Peer `^4 || ^5 || ^6`; renders on Ink 8.",
       "skills": [
         "ink-navigation"
       ],
@@ -418,13 +635,19 @@
         "node": ">=14.16"
       },
       "published": "2025-07-04T22:01:22.306Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "jdeniau"
+      ],
+      "repository": "https://github.com/jdeniau/ink-tab",
+      "dependencies": {},
+      "type": "module"
     },
     {
       "name": "ink-stepper",
       "group": "ecosystem",
       "status": "peer-excluded",
-      "note": "Peer `^6.6 || ^7`; first frame renders on Ink 8.",
+      "note": "Peer `^6.6 || ^7`; renders on Ink 8.",
       "skills": [
         "ink-navigation"
       ],
@@ -435,13 +658,21 @@
       },
       "engines": {},
       "published": "2026-08-07T22:21:25.366Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "archcorsair"
+      ],
+      "repository": "https://github.com/archcorsair/ink-stepper",
+      "dependencies": {
+        "ws": "^8.21.2"
+      },
+      "type": "module"
     },
     {
       "name": "ink-scroll-view",
       "group": "ecosystem",
       "status": "peer-excluded",
-      "note": "Peer `^7`; first frame renders on Ink 8. Ink 8's native `contentOffsetY` covers simple scrolling.",
+      "note": "Peer `^7`; renders on Ink 8. Ink 8's native `contentOffsetY` covers simple scrolling.",
       "skills": [
         "ink-navigation"
       ],
@@ -452,13 +683,19 @@
       },
       "engines": {},
       "published": "2026-09-09T10:18:44.509Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "byteland-technology"
+      ],
+      "repository": "https://github.com/ByteLandTechnology/ink-scroll-view",
+      "dependencies": {},
+      "type": "module"
     },
     {
       "name": "ink-scroll-list",
       "group": "ecosystem",
       "status": "peer-excluded",
-      "note": "Peer `^7`; first frame renders on Ink 8.",
+      "note": "Peer `^7`; renders on Ink 8.",
       "skills": [
         "ink-navigation"
       ],
@@ -469,13 +706,21 @@
       },
       "engines": {},
       "published": "2026-09-10T02:36:34.705Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "byteland-technology"
+      ],
+      "repository": "https://github.com/ByteLandTechnology/ink-scroll-list",
+      "dependencies": {
+        "ink-scroll-view": "^0.4.0"
+      },
+      "type": "module"
     },
     {
       "name": "ink-virtual-list",
       "group": "ecosystem",
       "status": "peer-excluded",
-      "note": "Peer `^6 || ^7`; first frame renders on Ink 8.",
+      "note": "Peer `^6 || ^7`; renders on Ink 8.",
       "skills": [
         "ink-navigation"
       ],
@@ -486,13 +731,19 @@
       },
       "engines": {},
       "published": "2026-08-07T20:36:53.793Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "archcorsair"
+      ],
+      "repository": "https://github.com/archcorsair/ink-virtual-list",
+      "dependencies": {},
+      "type": "module"
     },
     {
       "name": "ink-chart",
       "group": "ecosystem",
       "status": "avoid",
-      "note": "An abandoned, unrelated package with a different API. The components documented in `ink-charts` are `@pppp606/ink-chart`.",
+      "note": "An unrelated package with a different API. The components documented in `ink-charts` are `@pppp606/ink-chart`.",
       "skills": [
         "ink-charts",
         "ink-ecosystem-overview"
@@ -506,7 +757,16 @@
         "node": ">=8"
       },
       "published": "2019-12-03T21:24:34.139Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "slaweet"
+      ],
+      "repository": "https://github.com/slaweet/ink-chart",
+      "dependencies": {
+        "ervy": "^1.0.4",
+        "prop-types": "^15.7.2"
+      },
+      "type": null
     },
     {
       "name": "@pppp606/ink-chart",
@@ -526,7 +786,13 @@
         "node": ">=20.0.0"
       },
       "published": "2026-08-18T01:36:19.241Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "pppp606"
+      ],
+      "repository": "https://github.com/pppp606/ink-chart",
+      "dependencies": {},
+      "type": "module"
     },
     {
       "name": "ink-markdown",
@@ -544,13 +810,23 @@
       },
       "engines": {},
       "published": "2023-10-02T22:53:22.311Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "cameronhunter"
+      ],
+      "repository": null,
+      "dependencies": {
+        "marked": "^9.0.3",
+        "marked-terminal": "^6.0.0",
+        "@types/marked-terminal": "^3.1.4"
+      },
+      "type": null
     },
     {
       "name": "@kud/ink-markdown",
       "group": "ecosystem",
       "status": "peer-excluded",
-      "note": "Peer `7.x`; imports on Ink 8 but rendering was not exercised.",
+      "note": "Peer `7.x`; renders on Ink 8.",
       "skills": [
         "ink-markdown-and-code"
       ],
@@ -563,13 +839,25 @@
         "node": ">=20.0.0"
       },
       "published": "2026-09-30T23:41:16.652Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "kud"
+      ],
+      "repository": "https://github.com/kud/ink-markdown",
+      "dependencies": {
+        "chalk": "5.6.2",
+        "wrap-ansi": "10.0.0",
+        "slice-ansi": "9.0.0",
+        "string-width": "8.2.2",
+        "cli-highlight": "2.1.11"
+      },
+      "type": "module"
     },
     {
       "name": "ink-syntax-highlight",
       "group": "ecosystem",
       "status": "peer-excluded",
-      "note": "Peers `ink ^5.1.0` and `react ^18.3.1`; first frame renders on Ink 8 + React 19. Calling `cli-highlight` directly avoids the peer conflict.",
+      "note": "Peers `ink ^5.1.0` and `react ^18.3.1`; renders on Ink 8 + React 19. Calling `cli-highlight` directly avoids the peer conflict.",
       "skills": [
         "ink-markdown-and-code",
         "ink-ecosystem-overview"
@@ -583,7 +871,15 @@
         "node": ">=18"
       },
       "published": "2025-01-05T21:06:14.776Z",
-      "deprecated": null
+      "deprecated": null,
+      "maintainers": [
+        "vitaliis"
+      ],
+      "repository": "https://github.com/vsashyn/ink-syntax-highlight",
+      "dependencies": {
+        "cli-highlight": "^2.1.9"
+      },
+      "type": "module"
     }
   ]
 }

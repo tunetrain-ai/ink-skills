@@ -1,6 +1,6 @@
 # `<Box>` full prop reference
 
-All props are optional. Verified against ink 8.0.0.
+All props are optional.
 
 ## Dimensions
 
@@ -19,11 +19,13 @@ import React from 'react';
 import {Box, Text} from 'ink';
 
 const Example = () => (
-	<Box width={4}>
+	<Box width={6} borderStyle="single">
 		<Text>X</Text>
 	</Box>
 );
-// => 'X   '
+// ┌────┐
+// │X   │
+// └────┘
 ```
 
 ## Padding
@@ -72,7 +74,7 @@ const Example = () => (
 | `flexWrap` | `'nowrap' \| 'wrap' \| 'wrap-reverse'` | `'nowrap'` | |
 | `alignItems` | `'flex-start' \| 'center' \| 'flex-end' \| 'stretch' \| 'baseline'` | `'stretch'` | Cross-axis alignment of children. |
 | `alignSelf` | `'auto' \| 'flex-start' \| 'center' \| 'flex-end' \| 'stretch' \| 'baseline'` | `'auto'` | Overrides parent's `alignItems` for one child. |
-| `alignContent` | `'flex-start' \| 'flex-end' \| 'center' \| 'stretch' \| 'space-between' \| 'space-around' \| 'space-evenly'` | `'flex-start'` | Only matters with `flexWrap` creating multiple lines. Unlike CSS, Ink defaults to `flex-start` (not `stretch`) so wrapped lines stay compact. |
+| `alignContent` | `'flex-start' \| 'flex-end' \| 'center' \| 'stretch' \| 'space-between' \| 'space-around' \| 'space-evenly'` | `'flex-start'` | Only matters with `flexWrap` creating multiple lines. Ink defaults to `flex-start` (not `stretch`), so wrapped lines stay compact. |
 | `justifyContent` | `'flex-start' \| 'center' \| 'flex-end' \| 'space-between' \| 'space-around' \| 'space-evenly'` | `'flex-start'` | Main-axis alignment of children. |
 
 ```tsx
@@ -80,12 +82,12 @@ import React from 'react';
 import {Box, Text} from 'ink';
 
 const Example = () => (
-	<Box justifyContent="space-between">
+	<Box justifyContent="space-between" width={8}>
 		<Text>X</Text>
 		<Text>Y</Text>
 	</Box>
 );
-// [X      Y]
+// X      Y
 ```
 
 ## Position

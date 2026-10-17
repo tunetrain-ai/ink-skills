@@ -16,7 +16,7 @@ jobs:
   check:
     name: Validate, typecheck, and verify generated files (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -34,9 +34,17 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tests/external/package-lock.json
 
       # No dependency declares an install script; --ignore-scripts keeps it that way.
       - run: npm ci --ignore-scripts
+
+      # The pinned third-party packages the claim tests probe (peer-excluded / broken CJS /
+      # react-router / meow / create-ink-app). Needs the network once; tests run offline after.
+      - name: Install the external test project
+        run: npm run test:setup
 
       - name: Validate skill structure and ecosystem data
         run: npm run validate
@@ -46,6 +54,24 @@ jobs:
 
       - name: Import every runtime devDependency under Node ESM
         run: npm run smoke
+
+      - name: Prove the claims in the skills (tests/claims)
+        run: npm test
+
+      # The gate: every sentence, table row, code fence and fence comment in skills/ is covered by a
+      # claim that passed in the run above, and shipped text does not mention how it was checked.
+      - name: Every unit of every skill is covered by a passing claim
+        run: npm run test:coverage -- --require-results
+
+      - name: Keep the coverage report
+        if: always() && matrix.node == '24'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: claim-coverage
+          path: |
+            tests/.tmp/coverage.json
+            tests/.tmp/results.json
+          if-no-files-found: ignore
 
       - name: Verify generated files are up to date
         run: |
@@ -62,4 +88,37 @@ jobs:
         run: npx --no-install skills add ./ --list
 
       - name: Verify npm package contents
-        run: npm pack --dry-run
+        run: |
+          npm pack --dry-run --json | node -e '
+            const files = JSON.parse(require("fs").readFileSync(0, "utf8"))[0].files.map((f) => f.path);
+            const leaked = files.filter((p) => /^(tests|scripts|data|docs|\.github)\//.test(p));
+            if (leaked.length) { console.error("not meant to ship:", leaked); process.exit(1); }
+            console.log(files.length + " files in the tarball, none from tests/scripts/data/docs");
+          '
+
+  mutation:
+    name: Claims are bound to the text (mutation audit, Node 24)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tests/external/package-lock.json
+
+      - run: npm ci --ignore-scripts
+
+      - name: Install the external test project
+        run: npm run test:setup
+
+      # Changes every fact a claim reads from the skill text (a digit up, a letter replaced, a suffix)
+      # and requires the claim to fail: a token that survives is bound to nothing.
+      - name: Change each bound token; every claim must fail
+        run: npm run test:mutate
