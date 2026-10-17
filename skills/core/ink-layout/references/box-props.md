@@ -1,6 +1,6 @@
 # `<Box>` full prop reference
 
-All props are optional. Verified against ink 7.1.1.
+All props are optional. Verified against ink 8.0.0.
 
 ## Dimensions
 
@@ -8,9 +8,9 @@ All props are optional. Verified against ink 7.1.1.
 | --- | --- | --- |
 | `width` | `number \| string` | Cells, or `"50%"` of the resolved parent width. |
 | `height` | `number \| string` | Rows, or `"50%"` of the resolved parent height. |
-| `minWidth` | `number` | No percentage support (Yoga limitation). |
+| `minWidth` | `number` | Number only (cells); percentage strings are a type error. |
 | `minHeight` | `number \| string` | Percentage supported. |
-| `maxWidth` | `number` | No percentage support. |
+| `maxWidth` | `number` | Number only (cells); percentage strings are a type error. |
 | `maxHeight` | `number \| string` | Percentage supported. |
 | `aspectRatio` | `number` | width/height. Needs at least one size constraint so Ink can derive the other dimension. |
 
@@ -70,10 +70,10 @@ const Example = () => (
 | `flexBasis` | `number \| string` | — | [flex-basis](https://css-tricks.com/almanac/properties/f/flex-basis/) |
 | `flexDirection` | `'row' \| 'row-reverse' \| 'column' \| 'column-reverse'` | `'row'` | **Default is row**, not column. |
 | `flexWrap` | `'nowrap' \| 'wrap' \| 'wrap-reverse'` | `'nowrap'` | |
-| `alignItems` | `'flex-start' \| 'center' \| 'flex-end' \| 'stretch' \| 'baseline'` | — | Cross-axis alignment of children. |
+| `alignItems` | `'flex-start' \| 'center' \| 'flex-end' \| 'stretch' \| 'baseline'` | `'stretch'` | Cross-axis alignment of children. |
 | `alignSelf` | `'auto' \| 'flex-start' \| 'center' \| 'flex-end' \| 'stretch' \| 'baseline'` | `'auto'` | Overrides parent's `alignItems` for one child. |
 | `alignContent` | `'flex-start' \| 'flex-end' \| 'center' \| 'stretch' \| 'space-between' \| 'space-around' \| 'space-evenly'` | `'flex-start'` | Only matters with `flexWrap` creating multiple lines. Unlike CSS, Ink defaults to `flex-start` (not `stretch`) so wrapped lines stay compact. |
-| `justifyContent` | `'flex-start' \| 'center' \| 'flex-end' \| 'space-between' \| 'space-around' \| 'space-evenly'` | — | Main-axis alignment of children. |
+| `justifyContent` | `'flex-start' \| 'center' \| 'flex-end' \| 'space-between' \| 'space-around' \| 'space-evenly'` | `'flex-start'` | Main-axis alignment of children. |
 
 ```tsx
 import React from 'react';
@@ -101,7 +101,9 @@ const Example = () => (
 | --- | --- | --- | --- |
 | `display` | `'flex' \| 'none'` | `'flex'` | `'none'` hides the element entirely. |
 | `overflowX` / `overflowY` | `'visible' \| 'hidden'` | `'visible'` | |
-| `overflow` | `'visible' \| 'hidden'` | `'visible'` | Shorthand for both axes. Clips content that doesn't fit — it does not add scrolling; see `references/scrollable-view.md` for how to actually scroll. |
+| `overflow` | `'visible' \| 'hidden'` | `'visible'` | Shorthand for both axes. Clips content that doesn't fit. Pair with `contentOffsetX`/`contentOffsetY` to scroll; see `scrollable-view.md`. |
+| `contentOffsetX` | `number` | `0` | Shifts children left by N columns. Combine with `overflow="hidden"` to scroll. Fractional values truncate toward zero; non-finite → `0`. |
+| `contentOffsetY` | `number` | `0` | Shifts children up by N rows. Same rules. |
 
 ## Borders & background
 

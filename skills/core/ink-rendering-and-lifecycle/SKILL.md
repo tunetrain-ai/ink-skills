@@ -2,11 +2,13 @@
 name: ink-rendering-and-lifecycle
 description: Mount and control an Ink app with render() — its options (stdout/stdin/stderr streams, exitOnCtrlC, patchConsole, maxFps, incrementalRendering, concurrent, interactive, alternateScreen, kittyKeyboard), the returned Instance (rerender, unmount, waitUntilExit, waitUntilRenderFlush, clear), renderToString for non-interactive output, and why an Ink process exits immediately with no async work. Use for "how do I exit/render/test output as a string" questions.
 metadata:
-  ink: "7.1.1"
+  ink: "8.0.0"
   category: core
 ---
 
 # Rendering and the app lifecycle
+
+Requires Node >=22 and `react` / `@types/react` >=19.3.0.
 
 ## The process model
 
@@ -21,6 +23,12 @@ Exit paths: **Ctrl+C** (enabled by default via `exitOnCtrlC`), calling
 `exit()` from `useApp()` inside a component, or calling `unmount()` on the
 `Instance` `render()` returns.
 
+To run an interactive child that needs the terminal itself (`$EDITOR`, `less`,
+`fzf`) without exiting, `useApp()` also returns `suspendTerminal(callback)`: it
+hands the terminal over for the callback's duration, then restores Ink's
+terminal state and forces a full redraw (see `ink-async-and-suspense` for the
+spawn recipe).
+
 ```tsx
 import React from 'react';
 import {render, Text} from 'ink';
@@ -31,26 +39,36 @@ await waitUntilExit();
 console.log('App exited');
 ```
 
+Top-level `await` needs an ES module (`"type": "module"` in `package.json`, or
+an `.mjs` entry point); in CommonJS, wrap it in an `async` function.
+
 ## `render(tree, options?)` → `Instance`
 
-Key options (all optional):
+`options` is `Writable | RenderOptions` — passing a writable stream is
+shorthand for `{stdout}`. Key options (all optional):
 
 | Option | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `stdout` / `stdin` / `stderr` | stream | `process.std*` | Swap streams — essential for testing (see `ink-testing`). |
+| `stdout` / `stderr` | `NodeJS.WritableStream` | `process.stdout` / `process.stderr` | Swap streams — essential for testing (see `ink-testing`). Any `Writable` works; no TTY type is required. |
+| `stdin` | `NodeJS.ReadableStream` | `process.stdin` | Any `Readable` works. Raw mode is only used when stdin is a TTY with `setRawMode`. |
 | `exitOnCtrlC` | `boolean` | `true` | Needed if stdin is in raw mode, since Ctrl+C is then ignored by default. |
 | `patchConsole` | `boolean` | `true` | Intercepts `console.*` so it doesn't tear the live output; restored automatically before unmount's React cleanup runs. |
 | `onRender` | `({renderTime}) => void` | — | Fires after each commit. Doesn't wait for the stream write — use `waitUntilRenderFlush()` for that. |
 | `isScreenReaderEnabled` | `boolean` | `INK_SCREEN_READER` env var | See `ink-accessibility`. |
 | `debug` | `boolean` | `false` | Each update prints as separate output instead of overwriting — useful when debugging what actually rendered. |
 | `maxFps` | `number` | `30` | Caps update frequency; lower it for very-frequently-updating components to cut CPU. |
-| `incrementalRendering` | `boolean` | `false` | Only redraws changed lines instead of the whole frame — reduces flicker. |
+| `incrementalRendering` | `boolean` | `false` | Only redraws changed lines, and skips each changed line's unchanged prefix when safe — reduces flicker. Lines with unsupported terminal controls fall back to a whole-line redraw. |
 | `concurrent` | `boolean` | `false` | React Concurrent Mode — required for `Suspense`/`useTransition`/`useDeferredValue` to work correctly (see `ink-async-and-suspense`). |
 | `interactive` | `boolean` | auto (CI/`stdout.isTTY` detection) | Override auto-detection only if you have your own logic. |
 | `alternateScreen` | `boolean` | `false` | Full-screen apps — see `ink-fullscreen-layouts`. |
-| `kittyKeyboard` | `object` | `undefined` | Enhanced key reporting — see `ink-input-handling`. |
+| `kittyKeyboard` | `KittyKeyboardOptions` | `undefined` | Enhanced key reporting — see `ink-input-handling`. Enabling the `reportAssociatedText` flag automatically turns on `reportAllKeysAsEscapeCodes`. |
 
-```tsx no-check
+```tsx
+import React from 'react';
+import {render, Text} from 'ink';
+
+const MyApp = () => <Text>Hello</Text>;
+
 render(<MyApp />, {concurrent: true});
 ```
 
@@ -71,7 +89,7 @@ stream, or create a fresh one.
 | `clear()` | Clear the rendered output. |
 
 ```tsx
-import React, {useState} from 'react';
+import React from 'react';
 import {render, Text} from 'ink';
 
 const Counter = ({count}: {count: number}) => <Text>{count}</Text>;
@@ -100,11 +118,14 @@ console.log(output);
 
 Only option: `columns` (`number`, default `80`) — the virtual terminal width
 text wraps against. Caveats: terminal-only hooks (`useInput`, `useStdin`,
-`useStdout`, `useStderr`, `useWindowSize`, `useApp`, `useFocus`,
-`useFocusManager`) return no-op defaults rather than throwing. `useEffect`
-runs during the synchronous render but its state updates don't show up in the
-returned string (it reflects the initial render only); `useLayoutEffect`
-updates **do** show up, since it fires synchronously during commit.
+`useStdout`, `useStderr`, `useApp`, `useFocus`, `useFocusManager`) return
+no-op defaults rather than throwing. `useWindowSize` is not one of them: it
+reads the real `process.stdout` size (falling back to `COLUMNS`/`LINES`, then
+80×24) and ignores the `columns` option, so size a `renderToString` layout with
+explicit widths or `columns`, not `useWindowSize`. `useEffect` runs during the
+synchronous render but its state updates don't show up in the returned string
+(it reflects the initial render only); `useLayoutEffect` updates **do** show
+up, since it fires synchronously during commit.
 
 ## CI behavior
 

@@ -10,6 +10,10 @@
     "skipLibCheck": true,
     "noEmit": true,
     "isolatedModules": true,
+    // Required for the Ink 8 stream typing to be enforced: ink's declarations use
+    // NodeJS.WritableStream, which resolves to `any` (so stdout.columns silently
+    // compiles) unless @types/node is part of the program.
+    "types": ["node"],
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true
   },

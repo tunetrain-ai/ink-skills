@@ -2,7 +2,7 @@
 name: inkjs-ui-feedback
 description: "@inkjs/ui feedback components: Spinner, ProgressBar, Badge, StatusMessage, Alert — for loading states, progress, tags, and success/error/warning/info messages. Use whenever the user wants a spinner, progress bar, status tag, or colored alert/message box."
 metadata:
-  ink: "7.1.1"
+  ink: "8.0.0"
   category: ecosystem
 ---
 
@@ -36,7 +36,7 @@ import {ProgressBar} from '@inkjs/ui';
 const Example = () => <ProgressBar value={50} />;
 ```
 
-One prop: `value` (`number`, `0`–`100`, default `0`). It's a controlled,
+One prop: `value` (`number`, `0`–`100`; **required** in the types). It's a controlled,
 presentational component only — track progress in your own state and pass it
 in; `ProgressBar` doesn't animate or advance on its own.
 

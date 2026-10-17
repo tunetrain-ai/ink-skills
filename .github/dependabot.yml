@@ -7,10 +7,15 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - dependencies
+    ignore:
+      # Types must match the engines floor (Node >=22), not the newest Node.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     groups:
       # ink/@inkjs/ui bumps change what the typecheck actually verifies
       # against — keep them isolated from routine tooling bumps so a CI
-      # failure clearly points at the right cause.
+      # failure clearly points at the right cause. (A dependency that matches
+      # several groups lands in the first one listed.)
       ink-runtime:
         patterns:
           - 'ink'
@@ -18,12 +23,26 @@ updates:
           - 'ink-testing-library'
           - 'react'
           - '@types/react'
+      # Community packages whose snippets are typechecked and smoke-imported.
+      # A bump here needs data/ecosystem.json re-probed (see docs/SOURCES.md).
+      ink-ecosystem:
+        patterns:
+          - 'ink-*'
+          - '@alcalzone/ink-*'
+          - '@pppp606/ink-*'
+          - 'cli-spinners'
+          - 'cli-highlight'
+          - 'marked'
+          - 'marked-terminal'
+          - '@types/marked-terminal'
       tooling:
         patterns:
           - 'typescript'
           - 'prettier'
           - '@types/node'
           - 'yaml'
+          - 'semver'
+          - 'skills'
 
   - package-ecosystem: github-actions
     directory: /
@@ -31,3 +50,8 @@ updates:
       interval: weekly
     labels:
       - dependencies
+    groups:
+      # Actions are pinned by SHA; Dependabot rewrites the SHA and the version comment.
+      actions:
+        patterns:
+          - '*'

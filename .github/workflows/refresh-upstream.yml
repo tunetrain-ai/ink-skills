@@ -1,10 +1,19 @@
 name: Refresh upstream versions
 
-# Weekly check for whether ink/@inkjs/ui/the ecosystem packages pinned in
-# docs/SOURCES.md have moved. Opens a PR when they have — it does not edit
-# any skill content itself (see the note in check-upstream-drift.mjs on why:
-# API drift needs a human to re-read the actual .d.ts files, not just diff
-# version numbers — see docs/SOURCES.md's own note on this).
+# Weekly check for whether ink and the ecosystem packages tracked in
+# data/ecosystem.json have moved. When they have it refreshes the
+# registry-derived fields and the tables generated from them, pushes that to the
+# `chore/refresh-upstream` branch, and opens (or updates) a tracking issue with
+# the summary and a link to open the PR. It changes nothing else (see the header
+# of scripts/check-upstream-drift.mjs for why: whether a package works on the
+# current Ink needs a human to re-probe it, not a version diff).
+#
+# It deliberately does not open the pull request itself. The tunetrain-ai
+# organization forbids GitHub Actions from creating or approving pull requests
+# (the API answers 409 "The organization does not allow GitHub Actions to create
+# or approve pull requests"), and a PR opened with GITHUB_TOKEN would not run CI
+# anyway. A person opens the PR from the branch; CI then runs on it as usual.
+# Pushing a branch and filing an issue need no secret and no org setting.
 
 on:
   schedule:
@@ -12,36 +21,67 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   check-drift:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # push chore/refresh-upstream
+      issues: write # open/update the tracking issue and its label
     steps:
-      - uses: actions/checkout@v4
+      # Credentials stay persisted here (the other workflows disable that):
+      # the push below uses them.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '22'
+          node-version: '24'
           cache: npm
 
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
-      - name: Resolve current upstream versions
+      - name: Resolve current registry state
         run: npm run fetch-sources
 
-      - name: Compare against docs/SOURCES.md
+      - name: Compare against data/ecosystem.json
         id: drift
         run: npm run check-drift
 
-      - name: Open or update PR
+      - name: Regenerate the tables derived from the data
         if: steps.drift.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          commit-message: 'docs: bump pinned upstream versions in SOURCES.md'
-          title: 'upstream: dependency versions have moved'
-          body-path: .sources/drift-summary.md
-          branch: chore/refresh-upstream
-          add-paths: docs/SOURCES.md
-          labels: upstream-drift
+        run: npm run index
+
+      # The branch is owned by this workflow and rebuilt from main each run, so a
+      # force push is the intended behavior (it also replaces a stale one).
+      - name: Push the refreshed data to chore/refresh-upstream
+        if: steps.drift.outputs.changed == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -C chore/refresh-upstream
+          git add data/ecosystem.json docs/SOURCES.md skills/ecosystem/ink-ecosystem-overview/SKILL.md
+          git commit -m 'upstream: refresh ecosystem registry data'
+          git push --force origin chore/refresh-upstream
+
+      - name: Open or update the tracking issue
+        if: steps.drift.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          title='upstream: ecosystem packages have moved'
+          {
+            cat .sources/drift-summary.md
+            printf '\nThe refreshed data is on the `chore/refresh-upstream` branch. Open the PR (CI runs on it once a person opens it): https://github.com/%s/compare/main...chore/refresh-upstream?expand=1\n' "$REPO"
+          } > .sources/issue-body.md
+
+          gh label create upstream-drift --color FBCA04 --description 'Ecosystem packages or Ink moved upstream' --force
+
+          number=$(gh issue list --state open --label upstream-drift --json number --jq '.[0].number // empty')
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --title "$title" --body-file .sources/issue-body.md
+          else
+            gh issue create --title "$title" --label upstream-drift --body-file .sources/issue-body.md
+          fi

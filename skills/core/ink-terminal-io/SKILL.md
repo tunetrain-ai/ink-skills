@@ -2,7 +2,7 @@
 name: ink-terminal-io
 description: Low-level terminal I/O hooks in Ink — useStdout/useStderr for writing outside the managed render (write-without-tearing), useStdin for the raw stdin stream and setRawMode/isRawModeSupported, useWindowSize for terminal dimensions with resize updates, and useCursor for controlling the terminal cursor position (IME support). Use when useInput/useApp aren't the right fit.
 metadata:
-  ink: "7.1.1"
+  ink: "8.0.0"
   category: core
 ---
 
@@ -15,6 +15,11 @@ Both return `{stdout, write}` / `{stderr, write}` — the underlying stream
 `render()`) plus a `write(data: string)` helper. `write` is the key part: it
 writes a plain string **without tearing Ink's managed output** — similar to
 `<Static>`, but for a one-off string instead of a list of components.
+
+`stdout`/`stderr` are typed `NodeJS.WritableStream`, so `stdout.columns`,
+`stdout.rows` and `stdout.isTTY` do not type-check. (`stdout.on('resize', …)`
+still compiles, but only a TTY stream emits `resize`.) Use `useWindowSize()` for
+dimensions and resize — it re-renders on resize and handles non-TTY output.
 
 ```tsx
 import React, {useEffect} from 'react';
@@ -44,6 +49,12 @@ somewhere) — for reading keypresses, `useInput`/`usePaste` (see
 `ink-input-handling`) are almost always the better fit and already manage raw
 mode for you.
 
+`stdin` is typed `NodeJS.ReadableStream`: use `isRawModeSupported` (true only
+when stdin is a TTY with `setRawMode`), not `stdin.isTTY`. `useInput` drops
+unrecognized control sequences (mouse reports, focus in/out, cursor-position
+reports), and keypad Enter arrives as `key.return`; if you need those raw
+sequences, read `stdin` directly.
+
 ```tsx
 import React, {useEffect} from 'react';
 import {useStdin} from 'ink';
@@ -55,7 +66,7 @@ const Example = () => {
 		if (!isRawModeSupported) return;
 		setRawMode(true);
 		return () => setRawMode(false);
-	});
+	}, [isRawModeSupported, setRawMode]);
 
 	return null;
 };
@@ -68,7 +79,9 @@ Ink needs to intercept Ctrl+C itself when raw mode is on.
 
 ## `useWindowSize()`
 
-Returns `{columns, rows}` and re-renders your component on terminal resize —
+Returns `{columns, rows}` and re-renders your component on terminal resize
+(when the stream reports no size, e.g. piped output, it falls back to the
+`COLUMNS`/`LINES` environment variables, then to 80×24) —
 the hook to reach for whenever layout needs to react to the terminal size
 (see `ink-fullscreen-layouts` for full-screen/responsive layouts built on
 top of it).
@@ -99,15 +112,38 @@ so the composing character appears at the right spot for CJK/emoji input;
 most apps that don't build a custom text input never need this (`@inkjs/ui`'s
 `TextInput` — see `inkjs-ui-inputs` — handles it internally).
 
-```tsx no-check
-import {useCursor} from 'ink';
+```tsx
+import React, {useState} from 'react';
+import {Box, Text, useCursor, useInput} from 'ink';
 import stringWidth from 'string-width';
 
-const {setCursorPosition} = useCursor();
-const prompt = '> ';
-// Use string-width, not .length, so wide characters (CJK, emoji) don't
-// throw off the column position.
-setCursorPosition({x: stringWidth(prompt + text), y: 1});
+const Prompt = () => {
+	const [text, setText] = useState('');
+	const {setCursorPosition} = useCursor();
+	const prompt = '> ';
+
+	useInput((input, key) => {
+		if (key.backspace || key.delete) {
+			setText((current) => current.slice(0, -1));
+		} else if (input && !key.ctrl && !key.meta) {
+			setText((current) => current + input);
+		}
+	});
+
+	// Use string-width, not .length, so wide characters (CJK, emoji) don't
+	// throw off the column position.
+	setCursorPosition({x: stringWidth(prompt + text), y: 1});
+
+	return (
+		<Box flexDirection="column">
+			<Text>Type here:</Text>
+			<Text>
+				{prompt}
+				{text}
+			</Text>
+		</Box>
+	);
+};
 ```
 
 `position` is `{x, y}` (0-based column, 0-based row from the top of Ink's

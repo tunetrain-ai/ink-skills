@@ -2,14 +2,16 @@
 name: inkjs-ui-inputs
 description: "@inkjs/ui input components: TextInput, EmailInput, PasswordInput, ConfirmInput, Select, MultiSelect — props, onChange/onSubmit callbacks, defaultValue, and disabling. Use for prompting the user for text, email, a password, yes/no confirmation, or picking from a list of options."
 metadata:
-  ink: "7.1.1"
+  ink: "8.0.0"
   category: ecosystem
 ---
 
 # `@inkjs/ui` inputs
 
-`@inkjs/ui` (peer `ink >=5`) is Ink's official component library —
-uncontrolled inputs, each managing its own keyboard handling internally.
+`@inkjs/ui` (peer `ink >=5`, which covers Ink 8) is the component library by Ink's
+authors (`vadimdemedes/ink-ui`; not an Anthropic project). Its last release was
+2024-05, but it renders on Ink 8. Its inputs are uncontrolled — there is no
+`value` prop — each managing its own keyboard handling internally.
 Prefer these over hand-rolling the same thing with `useInput` unless a
 component's behavior genuinely doesn't fit.
 

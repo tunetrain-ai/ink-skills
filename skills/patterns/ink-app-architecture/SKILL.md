@@ -2,7 +2,7 @@
 name: ink-app-architecture
 description: Structure a real Ink CLI beyond a single component — multi-screen navigation with React Router's MemoryRouter, parsing command-line arguments and flags, and setting the process exit code correctly. Use when starting a nontrivial Ink app or asking how to add screens/routes/flags to one.
 metadata:
-  ink: "7.1.1"
+  ink: "8.0.0"
   category: patterns
 ---
 
@@ -24,7 +24,7 @@ import {render, useInput, Text} from 'ink';
 
 function Home() {
 	const navigate = useNavigate();
-	useInput((input, key) => {
+	useInput((_input, key) => {
 		if (key.return) navigate('/about');
 	});
 	return <Text>Home. Press Enter to go to About.</Text>;
@@ -32,7 +32,7 @@ function Home() {
 
 function About() {
 	const navigate = useNavigate();
-	useInput((input, key) => {
+	useInput((_input, key) => {
 		if (key.return) navigate('/');
 	});
 	return <Text>About. Press Enter to go back Home.</Text>;
@@ -75,6 +75,11 @@ or Node's built-in `util.parseArgs` for a dependency-free CLI. Parse args
 *before* calling `render()`, then pass the results in as props:
 
 ```tsx no-check
+import React from 'react';
+import meow from 'meow';
+import {render} from 'ink';
+import App from './app.js';
+
 const cli = meow(`
 	Usage
 	  $ my-cli <input>
@@ -97,20 +102,42 @@ exit code. For a CLI that needs a specific exit code on failure, set
 `process.exitCode` before exiting (preferred over `process.exit(code)`,
 which terminates immediately and can cut off pending stdout writes):
 
-```tsx no-check
-import {useApp} from 'ink';
+```tsx
+import React from 'react';
+import {Text, useApp, useInput} from 'ink';
 
-const {exit} = useApp();
+// Hooks must run inside a component or another hook.
+const useFatalError = () => {
+	const {exit} = useApp();
 
-const onFatalError = (error: Error) => {
-	process.exitCode = 1;
-	exit(error); // rejects waitUntilExit() with `error`
+	return (error: Error) => {
+		process.exitCode = 1;
+		exit(error); // rejects waitUntilExit() with `error`
+	};
+};
+
+export const App = () => {
+	const onFatalError = useFatalError();
+
+	useInput((input) => {
+		if (input === 'x') {
+			onFatalError(new Error('Something went wrong'));
+		}
+	});
+
+	return <Text>Press x to fail</Text>;
 };
 ```
 
 At the call site:
 
-```tsx no-check
+```tsx
+import React from 'react';
+import {render, Text} from 'ink';
+
+// `App` stands in for your root component.
+const App = () => <Text>Hello</Text>;
+
 const {waitUntilExit} = render(<App />);
 
 try {

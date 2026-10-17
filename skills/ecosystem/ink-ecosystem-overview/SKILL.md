@@ -1,8 +1,8 @@
 ---
 name: ink-ecosystem-overview
-description: Decision guide and Ink 7 / React 19 compatibility matrix for the Ink component ecosystem — which third-party package to reach for, and which ones have peer ranges that predate the current Ink major. Load this before recommending any third-party ink-* or @inkjs/ui package.
+description: Decision guide and Ink 8 compatibility matrix for the Ink component ecosystem — which third-party package to reach for, which ones cannot be loaded on Ink 8 (CommonJS builds, a bundled old Ink) and which only declare peer ranges that exclude it. Load this before recommending any third-party ink-* or @inkjs/ui package.
 metadata:
-  ink: "7.1.1"
+  ink: "8.0.0"
   category: ecosystem
 ---
 
@@ -15,56 +15,92 @@ map; the `inkjs-ui-*`, `ink-tables`, `ink-charts`, `ink-markdown-and-code`,
 `ink-decoration`, `ink-forms`, `ink-navigation`, and `ink-task-runners`
 skills hold the actual usage detail.
 
+**A package's peer range is not proof it works.** Ink 8 is ESM with
+top-level `await`, so a CommonJS package that `require()`s it fails with
+`ERR_REQUIRE_ASYNC_MODULE` however permissive its peer range is
+(`ink-table` declares `>=3.0.0` and cannot be loaded). The opposite also
+happens: `ink-tab` declares `^4 || ^5 || ^6` yet renders on Ink 8. The
+matrix below records what was actually run, not only what was declared.
+
 ## Decision table
 
 | Need | Reach for | Notes |
 | --- | --- | --- |
-| Text/email/password input, confirm, select, multi-select | `@inkjs/ui` (`inkjs-ui-inputs`) | Anthropic/Vadim-maintained, current for Ink 7. Default choice for interactive prompts. |
-| Spinner, progress bar, status/alert messages, badges | `@inkjs/ui` (`inkjs-ui-feedback`) | Same package as above. |
+| Text/email/password input, confirm, select, multi-select | `@inkjs/ui` (`inkjs-ui-inputs`) | By Ink's authors (not Anthropic). Dormant since 2024-05, but its peer range covers Ink 8 and it works. Default choice for interactive prompts. |
+| Spinner, progress bar, status/alert messages, badges | `@inkjs/ui` (`inkjs-ui-feedback`) | Same package. Use its `ProgressBar`, not `ink-progress-bar`. |
 | Bullet/numbered lists | `@inkjs/ui` (`inkjs-ui-lists`) | Same package. |
-| Tabular data | `ink-table`, or a hand-rolled `<Box>` grid | `ink-table` (`ink-tables`) |
-| Sparklines / bar / line charts | `ink-chart` | `ink-charts` — young package, verify its API against your installed version. |
-| Rendering Markdown or highlighted code | `ink-markdown`, `ink-syntax-highlight` | `ink-markdown-and-code` |
-| Links, gradients, big ASCII text, dividers | `ink-link`, `ink-gradient`, `ink-big-text`, `ink-divider` | `ink-decoration` |
-| A full multi-field form | `ink-form` | `ink-forms` |
-| Tabs, step wizards, scrollable/virtualized lists | `ink-tab`, `ink-stepper`, `ink-scroll-view`/`ink-scroll-list`/`ink-virtual-list` | `ink-navigation` |
-| A task-list UI, spawning subprocesses | `ink-task-list`, `ink-spawn` | `ink-task-runners` |
+| Tabular data | `@alcalzone/ink-table`, or a hand-rolled `<Box>` grid | `ink-tables`. Not `ink-table`: it cannot be loaded on Ink 8. |
+| Sparklines / bar / line charts | `@pppp606/ink-chart` | `ink-charts`. Not `ink-chart`: that is an unrelated abandoned package. |
+| Rendering Markdown or highlighted code | `marked` + `marked-terminal`, `cli-highlight` | `ink-markdown-and-code`. `ink-markdown` cannot be loaded on Ink 8. |
+| Links, gradients, big ASCII text | `ink-link`, `ink-gradient`, `ink-big-text` | `ink-decoration`. |
+| Dividers, titled boxes | A `<Box>` border; `@mishieck/ink-titled-box` | `ink-decoration`. `ink-divider` crashes on React 19. |
+| A full multi-field form | `ink-form` | `ink-forms`. |
+| Tabs, step wizards | `ink-tab`, `ink-stepper` | `ink-navigation`. Peer ranges exclude Ink 8 but both render on it. |
+| Scrolling a region, long lists | `<Box overflow="hidden" contentOffsetY>` | `ink-layout` (native since Ink 8); `ink-navigation` for the libraries. |
+| A task-list UI, spawning subprocesses | `ink-task-list`, `ink-spawn` | `ink-task-runners`. |
 
-## Compatibility matrix (verified against ink 7.1.1 / react 19.2)
+## Compatibility matrix (verified against ink 8.0.0 / react 19.3)
 
-| Package | Peer `ink` range | Status |
-| --- | --- | --- |
-| `@inkjs/ui` | `>=5` | current |
-| `ink-testing-library` | (`@types/react >=18`) | current |
-| `ink-text-input` | `>=5` | current |
-| `ink-spinner` | `>=4.0.0` | current |
-| `ink-select-input` | `>=5.0.0` | current |
-| `ink-multi-select` | unpinned | **check before use** |
-| `ink-table` | `>=3.0.0` | **stale** — predates Ink 7 |
-| `ink-link` | `>=6` | current |
-| `ink-gradient` | `>=6`, react `>=19.2.0` | current |
-| `ink-big-text` | `>=4` | current |
-| `ink-progress-bar` | unpinned | **check before use** — also uses a removed `<Color>` API in its own examples; see `ink-task-runners` for the caveat |
-| `ink-task-list` | `>=3.0.0` | **stale** — predates Ink 7 |
-| `ink-form` | `>=4` | current |
-| `ink-divider` | unpinned | **check before use** |
-| `ink-tab` | `^4 \|\| ^5 \|\| ^6` | current-ish — doesn't yet declare `^7` explicitly |
-| `ink-chart` | `>=2.0.0` | **stale peer declaration** — but a very young/actively-developed package; verify its actual current API, which may be ahead of what's documented here |
-| `ink-scroll-view` | `^7` | current |
-| `ink-scroll-list` | `^7` (built on `ink-scroll-view`) | current |
-| `ink-virtual-list` | `^6 \|\| ^7` | current |
-| `ink-markdown` | `>=2.0.0` | **stale** — predates Ink 7 |
-| `ink-syntax-highlight` | `^5.1.0` | **stale** — predates Ink 7 |
-| `ink-confirm-input` | unpinned, very old (pre-hooks era examples) | **legacy** — prefer `@inkjs/ui`'s `ConfirmInput` |
-| `ink-quicksearch-input` | unpinned | **check before use** |
+Generated from `data/ecosystem.json` — `works` installs with strict peer
+dependencies and renders on Ink 8; `peer excludes Ink 8` needs
+`--legacy-peer-deps` (or an `overrides` entry) to install, and the note says
+what was verified; `broken` fails to load or crashes; `avoid` is the wrong
+package for what these skills document.
 
-"Stale" means the package's declared peer range predates Ink 7 / React 19 —
-not necessarily broken, since Ink's public component/hook API has stayed
-largely stable across majors, but **verify before recommending it in new
-code**: check the installed version's actual `peerDependencies` (`npm view
-<package> peerDependencies`), and prefer a current alternative when one
-exists in the table above. When no current alternative exists (`ink-table`,
-`ink-markdown`, `ink-syntax-highlight` have none), say so plainly rather than
-silently treating the package as fully current.
+<!-- ECOSYSTEM_MATRIX:START (generated by `npm run index` from data/ecosystem.json, do not edit by hand) -->
 
-Related skills: inkjs-ui-inputs, inkjs-ui-feedback, ink-tables, ink-charts
+| Package | Peers | Ink 8 | Note |
+| --- | --- | --- | --- |
+| `ink` | react `>=19.3.0`, @types/react `>=19.3.0`, node `>=22` | core | Requires `react` and `@types/react` >=19.3.0 and Node >=22. |
+| `@inkjs/ui` | ink `>=5`, node `>=18` | works | Made by Ink's authors (not Anthropic). Dormant since 2024-05; peer `ink >=5` covers Ink 8. |
+| `ink-testing-library` | @types/react `>=18.0.0`, node `>=18` | works | Its only peer is `@types/react`; no `ink` peer to exclude Ink 8. |
+| `ink-text-input` | ink `>=5`, react `>=18`, node `>=18` | works | Controlled text input; `@inkjs/ui` `TextInput` is the uncontrolled alternative. |
+| `ink-spinner` | ink `>=4.0.0`, react `>=18.0.0`, node `>=14.16` | works |  |
+| `ink-select-input` | ink `>=5.0.0`, react `>=18.0.0`, node `>=18` | works |  |
+| `ink-multi-select` | node `>=8` | **broken** | CommonJS build `require()`s Ink, which is ESM with top-level await (`ERR_REQUIRE_ASYNC_MODULE`). Use `@inkjs/ui` `MultiSelect`. |
+| `ink-table` | ink `>=3.0.0`, react `>=16.8.0` | **broken** | CommonJS build `require()`s Ink (`ERR_REQUIRE_ASYNC_MODULE`). Use `@alcalzone/ink-table` or a `<Box>` grid. |
+| `@alcalzone/ink-table` | ink `>=3.0.0`, react `>=16.8.0` | works | ESM fork of `ink-table` with a named `Table` export. Old (2023) but renders on Ink 8. |
+| `ink-link` | ink `>=6`, node `>=18` | works |  |
+| `ink-gradient` | ink `>=6`, react `>=19.2.0`, node `>=20` | works |  |
+| `ink-big-text` | ink `>=4`, react `>=18`, node `>=14.16` | works |  |
+| `ink-divider` | — | **broken** | Hard-depends on `ink ^5.1.0`, so it installs a second Ink 5 whose reconciler crashes on React 19. Draw a rule with a `<Box>` border instead. |
+| `@mishieck/ink-titled-box` | ink `^6.0.0`, react `^19.1.0`, typescript `^5` | **peer excludes Ink 8** | Peer `ink ^6`; first frame renders on Ink 8. The unscoped name `ink-titled-box` does not exist on npm. |
+| `ink-picture` | ink `>=5`, react `>=18`, node `>=18` | untested | Probes the terminal at runtime and needs `<InkPictureProvider>`; verify in a real terminal. |
+| `ink-progress-bar` | — | **broken** | CommonJS build `require()`s Ink (`ERR_REQUIRE_ASYNC_MODULE`). Use `@inkjs/ui` `ProgressBar`. |
+| `ink-task-list` | ink `>=3.0.0`, react `>=16.8.0` | works | `state="loading"` requires a `spinner` prop. |
+| `ink-spawn` | react `>=18.0.0`, ink `>=4.0.0` | works |  |
+| `ink-form` | ink `>=4`, react `>=18` | works | Field types are `string`, `integer`, `float`, `select`, `boolean` (no `multiselect`). |
+| `ink-confirm-input` | ink `>=2`, react `>=16`, node `>=10` | **broken** | CommonJS build `require()`s Ink (`ERR_REQUIRE_ASYNC_MODULE`). Use `@inkjs/ui` `ConfirmInput`. |
+| `ink-quicksearch-input` | ink `2.6.x` | **broken** | Peers `ink 2.6.x` and uses the removed `<Color>`; CommonJS build fails to load. Combine `@inkjs/ui` `TextInput` with a filtered `Select`. |
+| `ink-tab` | @types/react `^18.0.0 \|\| ^19.0.0`, ink `^4.0.0 \|\| ^5.0.0 \|\| ^6.0.0`, react `^18.0.0 \|\| ^19.0.0`, node `>=14.16` | **peer excludes Ink 8** | Peer `^4 \|\| ^5 \|\| ^6`; renders on Ink 8 and Right arrow / Tab switch tabs, but its digit shortcuts did not fire in a test. |
+| `ink-stepper` | ink `^6.6.0 \|\| ^7.0.0`, react `^19.2.3` | **peer excludes Ink 8** | Peer `^6.6 \|\| ^7`; first frame renders on Ink 8. |
+| `ink-scroll-view` | ink `^7`, react `>=19.2.0` | **peer excludes Ink 8** | Peer `^7`; first frame renders on Ink 8. Ink 8's native `contentOffsetY` covers simple scrolling. |
+| `ink-scroll-list` | ink `^7`, react `>=19.2.0` | **peer excludes Ink 8** | Peer `^7`; first frame renders on Ink 8. |
+| `ink-virtual-list` | ink `^6.0.0 \|\| ^7.0.0`, react `^19.0.0` | **peer excludes Ink 8** | Peer `^6 \|\| ^7`; first frame renders on Ink 8. |
+| `ink-chart` | ink `>=2.0.0`, react `>=16.8.0`, node `>=8` | **avoid** | An abandoned, unrelated package with a different API. The components documented in `ink-charts` are `@pppp606/ink-chart`. |
+| `@pppp606/ink-chart` | ink `>=6`, react `>=19`, node `>=20.0.0` | works | Pre-1.0; pin the version. |
+| `ink-markdown` | ink `>=2.0.0`, react `>=16.8.0` | **broken** | CommonJS build `require()`s Ink (`ERR_REQUIRE_ASYNC_MODULE`). Render with `marked` + `marked-terminal` instead. |
+| `@kud/ink-markdown` | ink `7.x`, react `19.x`, node `>=20.0.0` | **peer excludes Ink 8** | Peer `7.x`; imports on Ink 8 but rendering was not exercised. |
+| `ink-syntax-highlight` | ink `^5.1.0`, react `^18.3.1`, node `>=18` | **peer excludes Ink 8** | Peers `ink ^5.1.0` and `react ^18.3.1`; first frame renders on Ink 8 + React 19. Calling `cli-highlight` directly avoids the peer conflict. |
+
+<!-- ECOSYSTEM_MATRIX:END -->
+
+## Before recommending a package that is not in the matrix
+
+Do not infer compatibility from the peer range alone. In a scratch project
+with the current `ink` and `react`:
+
+1. `npm view <package> peerDependencies type main` — a missing `"type":
+   "module"` plus a `main` ending in `.js` usually means CommonJS.
+2. `npm install <package>` with strict peers — an `ERESOLVE` error means the
+   range excludes your Ink.
+3. `node -e "import('<package>')"` — `ERR_REQUIRE_ASYNC_MODULE` means a
+   CommonJS build that `require()`s Ink; a React internals error means it
+   bundles its own old Ink.
+4. Render a minimal tree with `ink-testing-library` (`ink-testing`) and read
+   the first frame.
+
+Say plainly when a need has no working package rather than recommending one
+that merely installs.
+
+Related skills: inkjs-ui-inputs, inkjs-ui-feedback, ink-tables, ink-charts, ink-testing

@@ -38,7 +38,7 @@
     },
     {
       "title": "Ink UI (@inkjs/ui)",
-      "description": "Anthropic-maintained component library: inputs, feedback, lists, theming.",
+      "description": "Component library by Ink's authors: inputs, feedback, lists, theming.",
       "skills": [
         "inkjs-ui-feedback",
         "inkjs-ui-inputs",

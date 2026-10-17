@@ -1,44 +1,21 @@
 #!/usr/bin/env node
-// Pulls the upstream docs this catalog is authored from into .sources/
-// (gitignored — authoring aid, not shipped) and prints the resolved
-// versions so they can be compared against docs/SOURCES.md.
+// Resolves the current registry state of every package in data/ecosystem.json
+// and pulls the upstream readmes this catalog is authored from into .sources/
+// (gitignored — authoring aid, not shipped).
 //
 // Used two ways:
 //   - locally, by a human authoring or refreshing a skill
-//   - by .github/workflows/refresh-upstream.yml, which diffs the resolved
-//     versions against docs/SOURCES.md and opens a PR when they've moved
+//   - by .github/workflows/refresh-upstream.yml, which feeds the result to
+//     check-upstream-drift.mjs and opens a PR when anything has moved
 //
 // Network access required. Not part of `npm run check`.
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ROOT } from './lib/skills.mjs';
+import { loadEcosystem } from './lib/ecosystem.mjs';
 
 const SOURCES_DIR = join(ROOT, '.sources');
-
-const NPM_PACKAGES = [
-  'ink',
-  '@inkjs/ui',
-  'ink-testing-library',
-  'ink-text-input',
-  'ink-spinner',
-  'ink-select-input',
-  'ink-multi-select',
-  'ink-table',
-  'ink-link',
-  'ink-gradient',
-  'ink-big-text',
-  'ink-progress-bar',
-  'ink-task-list',
-  'ink-form',
-  'ink-divider',
-  'ink-tab',
-  'ink-chart',
-  'ink-scroll-view',
-  'ink-virtual-list',
-  'ink-markdown',
-  'ink-syntax-highlight',
-];
 
 const READMES = {
   'ink.md': 'https://raw.githubusercontent.com/vadimdemedes/ink/master/readme.md',
@@ -57,40 +34,55 @@ async function fetchText(url) {
   return res.text();
 }
 
+/** Latest version's registry fields. The full packument is needed for `time`. */
+async function resolvePackage(name) {
+  const packument = await fetchJson(`https://registry.npmjs.org/${encodeURIComponent(name)}`);
+  const version = packument['dist-tags']?.latest;
+  const manifest = packument.versions?.[version];
+  if (!version || !manifest) throw new Error(`${name}: no "latest" dist-tag`);
+  return {
+    version,
+    peers: manifest.peerDependencies ?? {},
+    engines: manifest.engines ?? {},
+    published: packument.time?.[version] ?? null,
+    deprecated: manifest.deprecated ?? null,
+  };
+}
+
 async function main() {
   await mkdir(SOURCES_DIR, { recursive: true });
+  const { packages } = await loadEcosystem();
 
   const versions = {};
-  for (const name of NPM_PACKAGES) {
+  for (const { name } of packages) {
     try {
-      const data = await fetchJson(`https://registry.npmjs.org/${encodeURIComponent(name)}/latest`);
-      versions[name] = {
-        version: data.version,
-        peerDependencies: data.peerDependencies ?? {},
-      };
+      versions[name] = await resolvePackage(name);
     } catch (err) {
       versions[name] = { error: String(err.message ?? err) };
     }
   }
 
-  await writeFile(
-    join(SOURCES_DIR, 'versions.json'),
-    JSON.stringify(versions, null, 2) + '\n',
-    'utf8'
-  );
+  const failed = Object.entries(versions).filter(([, v]) => v.error);
+  await writeFile(join(SOURCES_DIR, 'versions.json'), JSON.stringify(versions, null, 2) + '\n', 'utf8');
 
   for (const [filename, url] of Object.entries(READMES)) {
     try {
-      const text = await fetchText(url);
-      await writeFile(join(SOURCES_DIR, filename), text, 'utf8');
+      await writeFile(join(SOURCES_DIR, filename), await fetchText(url), 'utf8');
     } catch (err) {
       console.error(`Failed to fetch ${url}: ${err.message ?? err}`);
     }
   }
 
-  console.log(`Wrote ${Object.keys(versions).length} package version(s) to .sources/versions.json`);
+  console.log(`Resolved ${packages.length - failed.length}/${packages.length} package(s) to .sources/versions.json`);
+  for (const [name, v] of failed) console.error(`  ✗ ${name}: ${v.error}`);
   console.log(`ink: ${versions.ink?.version ?? 'ERROR'}`);
   console.log(`@inkjs/ui: ${versions['@inkjs/ui']?.version ?? 'ERROR'}`);
+
+  // A registry outage must not look like "no drift" to the weekly workflow.
+  if (failed.length === packages.length) {
+    console.error('Every lookup failed — refusing to report this as an up-to-date result.');
+    process.exit(1);
+  }
 }
 
 await main();

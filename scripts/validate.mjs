@@ -13,8 +13,11 @@
 // See docs/SOURCES.md and the Agent Skills spec (agentskills.io) for the
 // frontmatter rules this also checks.
 
-import { relative, resolve } from 'node:path';
+import { readFile, readdir } from 'node:fs/promises';
+import { join, relative, resolve } from 'node:path';
+import semver from 'semver';
 import { discoverSkillFiles, discoverAllDirs, ROOT, MAX_DEPTH, SKILLS_DIR } from './lib/skills.mjs';
+import { loadEcosystem, installedInkVersion, statusProblems } from './lib/ecosystem.mjs';
 
 const NAME_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const MAX_NAME_LEN = 64;
@@ -38,6 +41,17 @@ const skills = await discoverSkillFiles();
 if (skills.length === 0) {
   fail('No SKILL.md files found under skills/ — nothing to validate.');
 }
+
+// The Ink the catalog is verified against is whatever the lockfile installed.
+// Every skill's metadata.ink stamp must match its major.minor, so bumping ink
+// (e.g. via Dependabot) fails CI until the skills have been re-reviewed.
+let inkVersion = null;
+try {
+  inkVersion = await installedInkVersion();
+} catch {
+  fail('node_modules/ink not found — run `npm ci` before `npm run validate`.');
+}
+const majorMinor = (v) => `${semver.major(v)}.${semver.minor(v)}`;
 
 const byName = new Map();
 
@@ -111,6 +125,19 @@ for (const skill of skills) {
       }
     }
   }
+
+  // --- metadata.ink must match the installed ink (major.minor) -----------
+  if (inkVersion) {
+    const stamp = fm.metadata?.ink;
+    if (typeof stamp !== 'string' || !semver.valid(stamp)) {
+      fail(`${loc}: metadata.ink is required and must be a full version like "${inkVersion}"`);
+    } else if (majorMinor(stamp) !== majorMinor(inkVersion)) {
+      fail(
+        `${loc}: metadata.ink is "${stamp}" but ink ${inkVersion} is installed — re-review this ` +
+          `skill against the installed .d.ts files, then update the stamp`
+      );
+    }
+  }
 }
 
 // --- shadowing: no skill directory may contain another skill nested below it
@@ -133,19 +160,20 @@ for (const skill of skills) {
 }
 
 // --- cross-references: "Related skills:" lines must name real skills -----
-const relatedRe = /^Related skills?:\s*(.+)$/im;
+// matchAll over every such line, not just the first one in the file.
+const relatedRe = /^Related skills?:\s*(.+)$/gim;
 for (const skill of skills) {
-  const m = skill.body.match(relatedRe);
-  if (!m) continue;
-  const names = m[1]
-    .split(/[,\s]+/)
-    .map((s) => s.replace(/[`*_.]/g, '').trim())
-    .filter(Boolean);
-  for (const name of names) {
-    if (!byName.has(name)) {
-      fail(
-        `${relative(ROOT, skill.skillMdPath)}: "Related skills:" references unknown skill "${name}"`
-      );
+  for (const m of skill.body.matchAll(relatedRe)) {
+    const names = m[1]
+      .split(/[,\s]+/)
+      .map((s) => s.replace(/[`*_.]/g, '').trim())
+      .filter(Boolean);
+    for (const name of names) {
+      if (!byName.has(name)) {
+        fail(
+          `${relative(ROOT, skill.skillMdPath)}: "Related skills:" references unknown skill "${name}"`
+        );
+      }
     }
   }
 }
@@ -178,9 +206,11 @@ if (!router) {
   const missingFromRouter = [];
   for (const skill of skills) {
     if (skill.skillMdPath === router.skillMdPath) continue;
-    if (!router.body.includes(skill.frontmatter?.name ?? skill.name)) {
-      missingFromRouter.push(skill.frontmatter?.name ?? skill.name);
-    }
+    const name = skill.frontmatter?.name ?? skill.name;
+    // Whole-name match: a bare `includes` is satisfied by "ink-testing" appearing
+    // inside "ink-testing-library". Hyphens count as part of a name.
+    const mentioned = new RegExp(`(?<![\\w-])${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`);
+    if (!mentioned.test(router.body)) missingFromRouter.push(name);
   }
   if (missingFromRouter.length > 0) {
     fail(
@@ -208,6 +238,96 @@ for (const dir of allDirs) {
   });
   if (!hasDescendantSkill) {
     warn(`${relative(ROOT, dir)}: directory contains no SKILL.md (directly or nested) — dead weight?`);
+  }
+}
+
+// --- ecosystem data: data/ecosystem.json must agree with the skills and the registry
+const STATUSES = new Set(['core', 'works', 'peer-excluded', 'untested', 'broken', 'avoid']);
+const GROUPS = new Set(['core', 'ecosystem']);
+
+/** SKILL.md plus every references/*.md — everything an installed skill ships. */
+async function skillText(skill) {
+  let text = skill.raw;
+  try {
+    for (const entry of await readdir(join(skill.dir, 'references'), { withFileTypes: true })) {
+      if (entry.isFile() && entry.name.endsWith('.md')) {
+        text += '\n' + (await readFile(join(skill.dir, 'references', entry.name), 'utf8'));
+      }
+    }
+  } catch {
+    // no references/ directory
+  }
+  return text;
+}
+
+let ecosystem = null;
+try {
+  ecosystem = await loadEcosystem();
+} catch (err) {
+  fail(`data/ecosystem.json could not be read: ${err.message}`);
+}
+
+if (ecosystem && inkVersion) {
+  const textByName = new Map();
+  for (const skill of skills) textByName.set(skill.frontmatter?.name ?? skill.name, await skillText(skill));
+
+  const tracked = new Map();
+  for (const pkg of ecosystem.packages) {
+    const where = `data/ecosystem.json "${pkg.name}"`;
+    if (typeof pkg.name !== 'string' || !pkg.name) {
+      fail('data/ecosystem.json: a package entry has no "name"');
+      continue;
+    }
+    if (tracked.has(pkg.name)) fail(`${where}: listed twice`);
+    tracked.set(pkg.name, pkg);
+
+    if (!GROUPS.has(pkg.group)) fail(`${where}: group must be one of ${[...GROUPS].join(', ')}`);
+    if (!STATUSES.has(pkg.status)) fail(`${where}: status must be one of ${[...STATUSES].join(', ')}`);
+    if (typeof pkg.note !== 'string') fail(`${where}: "note" must be a string (use "" for none)`);
+    if (typeof pkg.version !== 'string') {
+      fail(`${where}: no registry data yet — run \`npm run fetch-sources && npm run check-drift\``);
+    }
+    if (!Array.isArray(pkg.skills) || pkg.skills.length === 0) {
+      fail(`${where}: "skills" must list at least one skill that covers this package`);
+    } else {
+      for (const skillName of pkg.skills) {
+        if (!byName.has(skillName)) fail(`${where}: lists unknown skill "${skillName}"`);
+        else if (!textByName.get(skillName).includes(pkg.name)) {
+          fail(`${where}: lists skill "${skillName}", which never mentions it`);
+        }
+      }
+    }
+    for (const problem of statusProblems(pkg, inkVersion)) fail(`${where}: ${problem}`);
+  }
+
+  // Every Ink package a skill names must be tracked, so the compatibility
+  // matrix and the weekly drift check cannot silently miss one.
+  // this repo / Ink's component-library repo, plus names a skill deliberately
+  // warns about because they don't exist on npm (`notOnNpm` in the data file).
+  const NOT_PACKAGES = new Set(['ink-skills', 'ink-ui', ...(ecosystem.notOnNpm ?? []).map((e) => e.name)]);
+  const pkgTokenRe = /(?<![\w/.@-])(?:@[a-z0-9-]+\/ink-[a-z0-9-]+|@inkjs\/ui|ink-[a-z0-9-]+)/g;
+  const untracked = new Map(); // token -> first skill that names it
+  for (const [skillName, text] of textByName) {
+    for (const m of text.matchAll(pkgTokenRe)) {
+      const token = m[0].replace(/-+$/, '');
+      if (byName.has(token) || NOT_PACKAGES.has(token) || tracked.has(token)) continue;
+      if (!untracked.has(token)) untracked.set(token, skillName);
+    }
+  }
+  for (const [token, skillName] of untracked) {
+    fail(
+      `"${token}" is named in skill "${skillName}" but is not in data/ecosystem.json — add it ` +
+        `(then \`npm run fetch-sources && npm run check-drift\`) so its Ink 8 status is tracked`
+    );
+  }
+
+  // A package installed in this repo is one we vouch for.
+  const pkgJson = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'));
+  for (const name of Object.keys(pkgJson.devDependencies ?? {})) {
+    const entry = tracked.get(name);
+    if (entry && !['core', 'works', 'untested'].includes(entry.status)) {
+      fail(`package.json installs "${name}" but data/ecosystem.json marks it "${entry.status}"`);
+    }
   }
 }
 

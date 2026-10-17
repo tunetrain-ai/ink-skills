@@ -2,22 +2,36 @@
 name: ink-getting-started
 description: Scaffold a new Ink project — create-ink-app, TypeScript/ESM setup, the package.json bin field for a CLI entry point, and the Node.js process model an Ink app runs under. Use when starting a new Ink CLI, adding Ink to an existing project, or the app exits immediately instead of rendering.
 metadata:
-  ink: "7.1.1"
+  ink: "8.0.0"
   category: core
 ---
 
 # Getting started with Ink
 
+Requires Node >=22 and react >=19.3.0 (plus @types/react >=19.3.0 when using TypeScript).
+
 ## Scaffold a new project
 
 The fastest path is [`create-ink-app`](https://github.com/vadimdemedes/create-ink-app),
-which sets up TypeScript, ESM, and a `bin` entry in one step:
+which sets up ESM, a `bin` entry, and a sample app in one step (plain JavaScript +
+Babel by default):
 
 ```sh
 npx create-ink-app my-ink-cli
-# or, explicitly TypeScript (recommended — ink's own types require react >=19.2.0)
+# or, explicitly TypeScript (recommended)
 npx create-ink-app --typescript my-ink-cli
 ```
+
+`create-ink-app` (latest `3.0.2`) still scaffolds Ink 4 / React 18 — its templates pin
+`ink ^4.1.0`, `react ^18.2.0`, `ink-testing-library ^3.0.0` and `"node": ">=16"`. After
+scaffolding, upgrade and raise the Node floor:
+
+```sh
+npm i ink@^8 react@^19.3
+npm i -D @types/react@^19.3 ink-testing-library@^4
+```
+
+Then set `"engines": {"node": ">=22"}` in `package.json`.
 
 ## Minimal hand-written setup
 
@@ -42,7 +56,7 @@ compile ahead of time for distribution.
 <summary>Manual JavaScript + Babel setup (no TypeScript)</summary>
 
 ```sh
-npm install --save-dev @babel/preset-react
+npm install --save-dev @babel/cli @babel/core @babel/preset-react
 ```
 
 ```json
@@ -88,7 +102,8 @@ how to exit deliberately instead of relying on the process just running out of w
 
 Every Ink element is a Yoga flexbox container — think of every `<Box>` as a browser
 `<div>` with `display: flex` already applied. There is no non-flex layout mode. All text
-must be wrapped in `<Text>`; raw strings as children of `<Box>` are not rendered as text.
-See `ink-layout` for the full flexbox API.
+must be wrapped in `<Text>`; a raw string as a direct child of `<Box>` throws
+(`Text string "…" must be rendered inside <Text> component`). See `ink-layout` for the full
+flexbox API.
 
 Related skills: ink-rendering-and-lifecycle, ink-layout, ink-input-handling

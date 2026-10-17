@@ -2,7 +2,7 @@
 name: ink-static-output
 description: Render permanent, append-only output above a live-updating Ink UI with <Static> — completed task lists, logs, or any growing collection of items you can't bound in advance. Covers the items/style/children(item) API and why previously-rendered items never re-render. Use when the user wants a scrolling log or a "completed items" list alongside a live progress UI.
 metadata:
-  ink: "7.1.1"
+  ink: "8.0.0"
   category: core
 ---
 

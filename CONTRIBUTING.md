@@ -30,18 +30,27 @@
    deliberately partial snippet (missing imports, undefined helper
    components) — not as a way to skip fixing a real type error.
 6. **Verify against the installed `.d.ts` files, not just a package's
-   readme.** `docs/SOURCES.md` documents a case where Ink's own GitHub
-   readme was ahead of what's published to npm — several props it
-   documented didn't exist in the shipped types. `npm run typecheck` is
-   what catches this; don't skip it.
+   readme.** A package's GitHub readme can be ahead of what's published to
+   npm — Ink's own once documented props that didn't exist in the shipped
+   types yet. `npm run typecheck` is what catches this; don't skip it.
 7. Run the full gate locally before opening a PR:
 
    ```sh
-   npm run check   # validate + typecheck
-   npm run index   # regenerate skills.sh.json, .claude-plugin/*.json, README's table
+   npm run check   # validate + typecheck + smoke-import
+   npm run index   # regenerate skills.sh.json, .claude-plugin/*.json, README's table, ecosystem tables
    ```
 
    CI fails if `npm run index` produces a diff you didn't commit.
+8. **Recommending a new community package?** Add it to
+   `data/ecosystem.json` first (`name`, `group`, `status`, `note`, `skills`),
+   run `npm run fetch-sources && npm run check-drift` to fill its registry
+   fields, then `npm run index`. Decide `status` by probing it, not by reading
+   its peer range — install with strict peers, `import()` it under Node ESM,
+   render it through `ink-testing-library` (see `docs/SOURCES.md`).
+   `npm run validate` fails if a skill names an `ink-*` package that isn't in
+   the data file, or if a status contradicts the declared peer range.
+   If the package installs cleanly and ships types, add it as a
+   `devDependency` so its snippets are typechecked and smoke-imported.
 
 ## Release process
 
@@ -65,11 +74,17 @@ rotate.
 **Cutting a release:**
 
 ```sh
-npm version <patch|minor|major>   # bumps package.json, commits, tags
+npm version <patch|minor|major>   # bumps package.json, regenerates + stages the manifests, commits, tags
 git push --follow-tags
 ```
 
-The tag push triggers `release.yml`: validates, typechecks, verifies
+`npm version` runs the `version` script, which runs `npm run index` and stages
+its output, so `.claude-plugin/*.json` carry the new version in the same
+commit as `package.json` — without it the release workflow's "generated files
+are up to date" gate would fail on every tag.
+
+The tag push triggers `release.yml` (Node 24, no dependency cache — the job can
+mint a publish token): runs `npm run check`, verifies
 `npm run index` has no diff, publishes with `--provenance`, and cuts a
 GitHub Release with the tarball attached.
 
@@ -80,13 +95,33 @@ via **Actions → Release → Run workflow** with `dry_run` left at its default
 ## Upstream drift
 
 `.github/workflows/refresh-upstream.yml` runs weekly, re-resolves every
-pinned package's `latest` version, and opens a PR bumping the version
-numbers in `docs/SOURCES.md` when they've moved. That PR is a *signal*, not
-a fix — it deliberately doesn't touch skill content. When it lands:
+package in `data/ecosystem.json` from the npm registry (version, peer ranges,
+engines, last release, deprecation), and — when anything has moved — pushes
+the refreshed fields and the tables generated from them to the
+`chore/refresh-upstream` branch and opens (or updates) a tracking issue
+labelled `upstream-drift`. That is a *signal*, not a fix: it never changes a
+package's `status`, a skill, or a `metadata.ink` stamp, and the issue lists what
+needs a human (a newer Ink than the one the catalog targets, a `status` that
+now contradicts the declared peer range, a deprecation).
 
-1. Re-read the affected package's current `.d.ts` files (not just its
-   readme — see point 6 above).
-2. Update whichever skill(s) reference it, including `metadata.ink`/version
-   stamps and, for ecosystem packages, the compatibility status in
-   `ink-ecosystem-overview` and `docs/SOURCES.md`'s status column.
-3. `npm run check` before merging.
+It does not open the pull request itself: the `tunetrain-ai` organization
+forbids GitHub Actions from creating or approving pull requests (the API
+answers `409 The organization does not allow GitHub Actions to create or approve
+pull requests`), and a PR opened with `GITHUB_TOKEN` wouldn't trigger CI
+anyway. Open the PR from the link in the issue; CI runs on it as on any other.
+(If an org admin ever enables that policy, or the workflow is given a GitHub
+App/PAT token, switching the last step to `peter-evans/create-pull-request` is
+a small change.)
+
+When the issue appears:
+
+1. Re-probe each affected package against the current Ink — strict-peer
+   install, `import()` under Node ESM, first-frame render (`docs/SOURCES.md`) —
+   and re-read its published `.d.ts` files (not just its readme — see point 6
+   above).
+2. Update `status`/`note` in `data/ecosystem.json`, then the skill(s) that
+   cover it, then `npm run index`.
+3. If **Ink itself** moved, bump the `ink` devDependency and re-review every
+   skill against the new `.d.ts` files; `npm run validate` fails until each
+   `metadata.ink` stamp matches the installed `major.minor`.
+4. `npm run check` before merging.
