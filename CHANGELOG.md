@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## 0.2.0 — 2026-10-17
+
 ### Added
 
 - **Every statement in the skills is covered by a test.** Each sentence, list item, table row, code
