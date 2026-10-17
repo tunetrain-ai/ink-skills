@@ -10,7 +10,7 @@
       "name": "ink-skills",
       "source": "./",
       "description": "Hierarchical agent skills catalog for Ink (React for CLIs) — core concepts, components, hooks, and ecosystem, for Claude Code and any Agent Skills-compatible client.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "category": "documentation"
     }
   ]
