@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Pinned third-party packages the skills discuss but that cannot be installed next to Ink 8 with strict peer dependencies. Test evidence only; never published.",
   "dependencies": {
-    "@kud/ink-markdown": "0.3.2",
+    "@kud/ink-markdown": "0.3.3",
     "@mishieck/ink-titled-box": "0.4.2",
     "@types/node": "22.20.5",
     "@types/react": "19.3.0",
@@ -30,6 +30,6 @@
     "ink-virtual-list": "0.3.0",
     "meow": "14.1.0",
     "react": "19.3.1",
-    "react-router": "8.4.0"
+    "react-router": "8.5.1"
   }
 }
