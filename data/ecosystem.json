@@ -676,13 +676,13 @@
       "skills": [
         "ink-navigation"
       ],
-      "version": "0.4.0",
+      "version": "0.4.1",
       "peers": {
-        "ink": "^7",
+        "ink": "^7 || ^8",
         "react": ">=19.2.0"
       },
       "engines": {},
-      "published": "2026-09-09T10:18:44.509Z",
+      "published": "2026-11-04T10:29:41.249Z",
       "deprecated": null,
       "maintainers": [
         "byteland-technology"
@@ -830,15 +830,15 @@
       "skills": [
         "ink-markdown-and-code"
       ],
-      "version": "0.3.2",
+      "version": "0.3.3",
       "peers": {
-        "ink": "7.x",
-        "react": "19.x"
+        "ink": ">=7",
+        "react": ">=19"
       },
       "engines": {
         "node": ">=20.0.0"
       },
-      "published": "2026-09-30T23:41:16.652Z",
+      "published": "2026-10-23T11:39:20.857Z",
       "deprecated": null,
       "maintainers": [
         "kud"

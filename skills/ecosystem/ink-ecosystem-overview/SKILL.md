@@ -73,13 +73,13 @@ document.
 | `ink-quicksearch-input` | ink `2.6.x` | **broken** | Peers `ink 2.6.x` and uses the removed `<Color>`; CommonJS build fails to load. Combine `@inkjs/ui` `TextInput` with a filtered `Select`. |
 | `ink-tab` | @types/react `^18.0.0 \|\| ^19.0.0`, ink `^4.0.0 \|\| ^5.0.0 \|\| ^6.0.0`, react `^18.0.0 \|\| ^19.0.0`, node `>=14.16` | **peer excludes Ink 8** | Peer `^4 \|\| ^5 \|\| ^6`; renders on Ink 8. |
 | `ink-stepper` | ink `^6.6.0 \|\| ^7.0.0`, react `^19.2.3` | **peer excludes Ink 8** | Peer `^6.6 \|\| ^7`; renders on Ink 8. |
-| `ink-scroll-view` | ink `^7`, react `>=19.2.0` | **peer excludes Ink 8** | Peer `^7`; renders on Ink 8. Ink 8's native `contentOffsetY` covers simple scrolling. |
+| `ink-scroll-view` | ink `^7 \|\| ^8`, react `>=19.2.0` | **peer excludes Ink 8** | Peer `^7`; renders on Ink 8. Ink 8's native `contentOffsetY` covers simple scrolling. |
 | `ink-scroll-list` | ink `^7`, react `>=19.2.0` | **peer excludes Ink 8** | Peer `^7`; renders on Ink 8. |
 | `ink-virtual-list` | ink `^6.0.0 \|\| ^7.0.0`, react `^19.0.0` | **peer excludes Ink 8** | Peer `^6 \|\| ^7`; renders on Ink 8. |
 | `ink-chart` | ink `>=2.0.0`, react `>=16.8.0`, node `>=8` | **avoid** | An unrelated package with a different API. The components documented in `ink-charts` are `@pppp606/ink-chart`. |
 | `@pppp606/ink-chart` | ink `>=6`, react `>=19`, node `>=20.0.0` | works | Pre-1.0; pin the version. |
 | `ink-markdown` | ink `>=2.0.0`, react `>=16.8.0` | **broken** | CommonJS build `require()`s Ink (`ERR_REQUIRE_ASYNC_MODULE`). Render with `marked` + `marked-terminal` instead. |
-| `@kud/ink-markdown` | ink `7.x`, react `19.x`, node `>=20.0.0` | **peer excludes Ink 8** | Peer `7.x`; renders on Ink 8. |
+| `@kud/ink-markdown` | ink `>=7`, react `>=19`, node `>=20.0.0` | **peer excludes Ink 8** | Peer `7.x`; renders on Ink 8. |
 | `ink-syntax-highlight` | ink `^5.1.0`, react `^18.3.1`, node `>=18` | **peer excludes Ink 8** | Peers `ink ^5.1.0` and `react ^18.3.1`; renders on Ink 8 + React 19. Calling `cli-highlight` directly avoids the peer conflict. |
 
 <!-- ECOSYSTEM_MATRIX:END -->
